@@ -16,11 +16,11 @@ func Unpack(inStr string) (string, error) {
 		count               int
 		isNum               bool
 		outStr              strings.Builder
-		isMultiplyReady     bool = false
-		isBackSlashDetected bool = false
+		isMultiplyReady     = false
+		isBackSlashDetected = false
 		runeToMulti         rune
 	)
-
+	fmt.Printf("Распаковка строки '%s'\n", inStr)
 	for i, inRune := range inStr {
 		fmt.Printf("Rune[%d]=%s\n", i, string(inRune))
 		count, isNum = numbersMap[inRune]
@@ -42,20 +42,24 @@ func Unpack(inStr string) (string, error) {
 				isMultiplyReady = false
 			}
 		case isNum:
-			if isBackSlashDetected {
+			switch {
+			case isBackSlashDetected:
 				fmt.Printf("Обнаружена экранированная бэкслэшем цифра\n")
 				runeToMulti = inRune
 				isBackSlashDetected = false
 				isMultiplyReady = true
-			} else if !isMultiplyReady {
+			case !isMultiplyReady:
 				fmt.Printf("Ошибка: Обнаружена цифра при отсутствии символа для мультипликации!\n")
 				return "", ErrInvalidString
-			} else if isMultiplyReady {
+			case isMultiplyReady:
 				fmt.Printf("Символ %s будет повторен %d раз\n", string(runeToMulti), count)
 				for j := 1; j <= count; j++ {
 					outStr.WriteRune(runeToMulti)
 				}
 				isMultiplyReady = false
+			default:
+				fmt.Printf("Ошибка: Кажется случилось что-то, что мы не предусмотрели!\n")
+				return "", ErrInvalidString
 			}
 		default:
 			// Просто символ. выводим предыдущий, если такой есть, запоминаем текущий
@@ -69,5 +73,6 @@ func Unpack(inStr string) (string, error) {
 	if isMultiplyReady {
 		outStr.WriteRune(runeToMulti)
 	}
+	fmt.Printf("'%s'--->'%s'\n", inStr, outStr.String())
 	return outStr.String(), nil
 }

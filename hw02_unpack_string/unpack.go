@@ -32,7 +32,7 @@ func Unpack(inStr string) (string, error) {
 			} else {
 				fmt.Printf("Обнаружен первый бэкслэш\n")
 				isBackSlashDetected = true
-				//Выводим предыдущий символ, если такой есть
+				// Выводим предыдущий символ, если такой есть
 				if isMultiplyReady {
 					outStr.WriteRune(runeToMulti)
 				}
@@ -55,7 +55,7 @@ func Unpack(inStr string) (string, error) {
 				isMultiplyReady = false
 			}
 		} else {
-			//Просто символ. выводим предыдущий, если такой есть, запоминаем текущий
+			// Просто символ. выводим предыдущий, если такой есть, запоминаем текущий
 			if isMultiplyReady {
 				outStr.WriteRune(runeToMulti)
 			}
@@ -67,10 +67,4 @@ func Unpack(inStr string) (string, error) {
 		outStr.WriteRune(runeToMulti)
 	}
 	return outStr.String(), nil
-}
-
-func main() {
-	const testStr = "\\\\\\89a\\32\\\\ы4c6"
-	unpackedStr, _ := Unpack(testStr)
-	fmt.Printf("%s ---> %s\n", testStr, unpackedStr)
 }

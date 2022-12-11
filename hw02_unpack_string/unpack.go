@@ -6,8 +6,10 @@ import (
 	"strings"
 )
 
-var ErrInvalidString = errors.New("invalid string")
-var numbersMap = map[rune]int{'1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '0': 0}
+var (
+	ErrInvalidString = errors.New("invalid string")
+	numbersMap       = map[rune]int{'1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '0': 0}
+)
 
 func Unpack(inStr string) (string, error) {
 	var (
@@ -23,7 +25,8 @@ func Unpack(inStr string) (string, error) {
 		fmt.Printf("Rune[%d]=%s\n", i, string(inRune))
 		count, isNum = numbersMap[inRune]
 
-		if inRune == '\\' {
+		switch {
+		case inRune == '\\':
 			if isBackSlashDetected {
 				fmt.Printf("Обнаружен второй бэкслэш\n")
 				runeToMulti = '\\'
@@ -38,7 +41,7 @@ func Unpack(inStr string) (string, error) {
 				}
 				isMultiplyReady = false
 			}
-		} else if isNum {
+		case isNum:
 			if isBackSlashDetected {
 				fmt.Printf("Обнаружена экранированная бэкслэшем цифра\n")
 				runeToMulti = inRune
@@ -54,7 +57,7 @@ func Unpack(inStr string) (string, error) {
 				}
 				isMultiplyReady = false
 			}
-		} else {
+		default:
 			// Просто символ. выводим предыдущий, если такой есть, запоминаем текущий
 			if isMultiplyReady {
 				outStr.WriteRune(runeToMulti)

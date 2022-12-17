@@ -19,9 +19,8 @@ type WordStatSlice []WordStat
 func (sliceWS WordStatSlice) Less(i, j int) bool {
 	if sliceWS[i].Freq == sliceWS[j].Freq {
 		return sliceWS[i].Word < sliceWS[j].Word
-	} else {
-		return sliceWS[i].Freq > sliceWS[j].Freq
 	}
+	return sliceWS[i].Freq > sliceWS[j].Freq
 }
 
 func (sliceWS WordStatSlice) Len() int {

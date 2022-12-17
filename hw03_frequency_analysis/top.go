@@ -1,23 +1,16 @@
-package main //hw03frequencyanalysis
+package hw03frequencyanalysis
 
 import (
-	"fmt"
 	"sort"
 	"strings"
 )
-
-func Top10(_ string) []string {
-	// Place your code here.
-
-	return nil
-}
-
-type RuneSet map[rune]struct{}
 
 type WordStat struct {
 	Word string
 	Freq int64
 }
+
+const WordStatGaps string = " \n\t,.:;!?\"'()[]"
 
 type WordStatMap map[string]int64
 
@@ -27,7 +20,7 @@ func (sliceWS WordStatSlice) Less(i, j int) bool {
 	if sliceWS[i].Freq == sliceWS[j].Freq {
 		return sliceWS[i].Word < sliceWS[j].Word
 	} else {
-		return sliceWS[i].Freq < sliceWS[j].Freq
+		return sliceWS[i].Freq > sliceWS[j].Freq
 	}
 }
 
@@ -49,20 +42,25 @@ func (mapWS *WordStatMap) ToSlice() WordStatSlice {
 	return outSlice
 }
 
-func (mapWS *WordStatMap) Build(inText string, inGapSet RuneSet, inCaseSensitive bool) {
+func (mapWS *WordStatMap) Build(inText string, inGapSet string, inCaseSensitive bool) {
 	var buffer strings.Builder
 
-	if *mapWS == nil {
-		newmapWS := make(WordStatMap)
-		mapWS = &newmapWS
+	mapGapSet := make(map[rune]struct{})
+	for _, symbol := range inGapSet {
+		mapGapSet[symbol] = struct{}{}
 	}
 
 	if !inCaseSensitive {
 		inText = strings.ToLower(inText)
 	}
-	for _, v := range inText {
-		_, okg := inGapSet[v]
-		if okg {
+
+	arrText := []rune(inText)
+	for i, v := range arrText {
+		_, okg := mapGapSet[v]
+		if !okg {
+			buffer.WriteRune(v)
+		}
+		if okg || i == len(arrText)-1 {
 			if buffer.Len() > 0 {
 				word := buffer.String()
 				_, okw := (*mapWS)[word]
@@ -73,21 +71,29 @@ func (mapWS *WordStatMap) Build(inText string, inGapSet RuneSet, inCaseSensitive
 				}
 				buffer.Reset()
 			}
-			break
 		}
-		buffer.WriteRune(v)
 	}
+	delete((*mapWS), "-")
 }
 
-func TopN(inText string, inGapSet RuneSet, inCaseSensitive bool, inN int) WordStatSlice {
-	var mapWS WordStatMap
+func TopN(inText string, inGapSet string, inCaseSensitive bool, inN int) WordStatSlice {
+	mapWS := make(WordStatMap)
 	mapWS.Build(inText, inGapSet, inCaseSensitive)
+
 	sliceWS := mapWS.ToSlice()
 	sort.Sort(sliceWS)
-	return nil
+
+	if inN > 0 && len(sliceWS) > inN {
+		return sliceWS[:inN]
+	}
+	return sliceWS
 }
 
-func main() {
-	text := `One, one, one, one, one, and one 3 3 3`
-	fmt.Println(Top10(text))
+func Top10(inText string) []string {
+	tmpArr := TopN(inText, WordStatGaps, false, 10)
+	outArr := make([]string, len(tmpArr))
+	for i := range tmpArr {
+		outArr[i] = tmpArr[i].Word
+	}
+	return outArr
 }

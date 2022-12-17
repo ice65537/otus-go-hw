@@ -32,7 +32,7 @@ func (sliceWS WordStatSlice) Swap(i, j int) {
 }
 
 func (mapWS *WordStatMap) ToSlice() WordStatSlice {
-	var outSlice = make([]WordStat, len(*mapWS))
+	outSlice := make([]WordStat, len(*mapWS))
 	i := 0
 	for idx, value := range *mapWS {
 		outSlice[i] = WordStat{Word: idx, Freq: value}

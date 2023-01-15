@@ -18,7 +18,7 @@ func TestList(t *testing.T) {
 	t.Run("double remove", func(t *testing.T) {
 		l := NewList()
 		l.PushFront(10) // [10]
-		x:=l.Front()
+		x := l.Front()
 		l.Remove(x)
 		require.Equal(t, 0, l.Len())
 		require.Nil(t, l.Front())

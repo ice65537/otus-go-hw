@@ -85,9 +85,9 @@ func Run(tasks []Task, numWorkers, maxErrors int) error {
 func worker(name string, jobQueue *chan taskJob, jobResult *chan taskResult, wgDone *sync.WaitGroup, brk *breaker) {
 	for {
 		jq, ok := <-(*jobQueue)
-		(*brk).RLock()
-		flag := (*brk).flag
-		(*brk).RUnlock()
+		brk.RLock()
+		flag := brk.flag
+		brk.RUnlock()
 		if !ok || flag {
 			break
 		}

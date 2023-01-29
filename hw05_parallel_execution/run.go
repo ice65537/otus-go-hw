@@ -54,7 +54,7 @@ func Run(tasks []Task, numWorkers, maxErrors int) error {
 	errorStream := ""
 	for successCount+errorCount < len(tasks) && errorCount < maxErrors {
 		jr := <-jobResult
-		jobDesc := fmt.Sprintf("\r\nTask[%d]{%s} by %s", jr.idx, runtime.FuncForPC(reflect.ValueOf(tasks[jr.idx]).Pointer()).Name(), jr.worker)
+		jobDesc := fmt.Sprintf("\r\nTask[%d]{%s} by %s", jr.idx, getFuncName(tasks[jr.idx]), jr.worker)
 		if jr.err != nil {
 			errorCount++
 			errorStream += jobDesc
@@ -87,4 +87,8 @@ func worker(name string, jobQueue *chan taskJob, jobResult *chan taskResult, bre
 			}
 		}
 	}
+}
+
+func getFuncName(i interface{}) string {
+	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
 }

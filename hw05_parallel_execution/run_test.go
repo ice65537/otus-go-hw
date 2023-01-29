@@ -2,18 +2,16 @@ package hw05parallelexecution
 
 import (
 	"errors"
-	"fmt"
 	"math/rand"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"go.uber.org/goleak"
 )
 
 func TestRun(t *testing.T) {
-	//defer goleak.VerifyNone(t)
+	// defer goleak.VerifyNone(t)
 
 	/*t.Run("if were errors in first M tasks, than finished not more N+M tasks", func(t *testing.T) {
 		tasksCount := 50

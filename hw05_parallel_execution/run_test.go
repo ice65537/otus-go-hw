@@ -68,28 +68,6 @@ func TestRun(t *testing.T) {
 		require.LessOrEqual(t, int64(elapsedTime), int64(sumTime/2), "tasks were run sequentially?")
 	})
 
-	t.Run("all tasks without errors break", func(t *testing.T) {
-		tasksCount := 30
-		tasks := make([]Task, 0, tasksCount)
-
-		var runTasksCount int32
-
-		for i := 0; i < tasksCount; i++ {
-			tasks = append(tasks, func() error {
-				time.Sleep(50 * time.Millisecond)
-				atomic.AddInt32(&runTasksCount, 1)
-				return errors.New("Err")
-			})
-		}
-
-		workersCount := 5
-		maxErrorsCount := -7783
-
-		err := Run(tasks, workersCount, maxErrorsCount)
-		require.NoError(t, err)
-		require.Equal(t, runTasksCount, int32(tasksCount), "not all tasks were completed")
-	})
-
 	t.Run("Too much workers", func(t *testing.T) {
 		tasksCount := 30
 		tasks := make([]Task, 0, tasksCount)
@@ -120,37 +98,7 @@ func TestRun(t *testing.T) {
 		require.Equal(t, runTasksCount, int32(tasksCount), "not all tasks were completed")
 	})
 
-	t.Run("Zero (one) worker", func(t *testing.T) {
-		tasksCount := 10
-		tasks := make([]Task, 0, tasksCount)
-
-		var runTasksCount int32
-
-		for i := 0; i < tasksCount; i++ {
-			if i%2 == 0 {
-				tasks = append(tasks, func() error {
-					time.Sleep(50 * time.Millisecond)
-					atomic.AddInt32(&runTasksCount, 1)
-					return errors.New("Err")
-				})
-			} else {
-				tasks = append(tasks, func() error {
-					time.Sleep(50 * time.Millisecond)
-					atomic.AddInt32(&runTasksCount, 1)
-					return nil
-				})
-			}
-		}
-
-		workersCount := 1
-		maxErrorsCount := -1
-
-		err := Run(tasks, workersCount, maxErrorsCount)
-		require.NoError(t, err)
-		require.Equal(t, runTasksCount, int32(tasksCount), "not all tasks were completed")
-	})
-
-	t.Run("Zero (one) worker and Nonsequental test", func(t *testing.T) {
+	t.Run("Zero (one) worker and Nonsequental and skip all errors tests", func(t *testing.T) {
 		tasksCount := 100
 		tasks := make([]Task, 0, tasksCount)
 
@@ -173,8 +121,8 @@ func TestRun(t *testing.T) {
 		}
 
 		runTasksCount = 0
-		workersCount := -45  // equal to 1
-		maxErrorsCount := -1 // ignore errors
+		workersCount := -45     // equal to 1
+		maxErrorsCount := -1345 // ignore errors
 		start := time.Now()
 		err := Run(tasks, workersCount, maxErrorsCount)
 		elapsedTime := time.Since(start)

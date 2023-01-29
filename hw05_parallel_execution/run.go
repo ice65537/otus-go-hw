@@ -23,6 +23,11 @@ type taskResult struct {
 	worker string
 }
 
+type breaker struct {
+	sync.RWMutex
+	flag bool
+}
+
 // var taskQueue chan Task
 
 // Run starts tasks in numWorkers goroutines and stops its work when receiving maxErrors errors from tasks.
@@ -42,12 +47,12 @@ func Run(tasks []Task, numWorkers, maxErrors int) error {
 
 	jobResult := make(chan taskResult, len(tasks))
 	var wgDone sync.WaitGroup
-	breakFlag := false
+	breaker := breaker{flag: false}
 	defer close(jobResult)
 
 	wgDone.Add(numWorkers)
 	for i := 1; i <= numWorkers; i++ {
-		go worker(fmt.Sprint("Worker", i), &jobQueue, &jobResult, &wgDone, &breakFlag)
+		go worker(fmt.Sprint("Worker", i), &jobQueue, &jobResult, &wgDone, &breaker)
 	}
 
 	successCount := 0
@@ -64,7 +69,9 @@ func Run(tasks []Task, numWorkers, maxErrors int) error {
 		}
 	}
 
-	breakFlag = true
+	breaker.Lock()
+	breaker.flag = true
+	breaker.Unlock()
 	wgDone.Wait()
 
 	if errorCount >= maxErrors {
@@ -75,10 +82,13 @@ func Run(tasks []Task, numWorkers, maxErrors int) error {
 	return nil
 }
 
-func worker(name string, jobQueue *chan taskJob, jobResult *chan taskResult, wgDone *sync.WaitGroup, breakFlag *bool) {
+func worker(name string, jobQueue *chan taskJob, jobResult *chan taskResult, wgDone *sync.WaitGroup, brk *breaker) {
 	for {
 		jq, ok := <-(*jobQueue)
-		if !ok || *breakFlag {
+		(*brk).RLock()
+		flag := (*brk).flag
+		(*brk).RUnlock()
+		if !ok || flag {
 			break
 		}
 		(*jobResult) <- taskResult{jq.idx, jq.task(), name}

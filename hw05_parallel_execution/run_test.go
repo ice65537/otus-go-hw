@@ -35,6 +35,7 @@ func TestRun(t *testing.T) {
 		err := Run(tasks, workersCount, maxErrorsCount)
 		fmt.Println("runTasksCount=", runTasksCount)
 		fmt.Println("int32(workersCount+maxErrorsCount)=", int32(workersCount+maxErrorsCount))
+		fmt.Println("Truef=", errors.Is(err, ErrErrorsLimitExceeded))
 
 		require.Truef(t, errors.Is(err, ErrErrorsLimitExceeded), "actual err - %v", err)
 		require.LessOrEqual(t, runTasksCount, int32(workersCount+maxErrorsCount), "extra tasks were started")

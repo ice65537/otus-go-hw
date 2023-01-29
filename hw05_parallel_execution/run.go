@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
+	"sync"
 )
 
 var ErrErrorsLimitExceeded error
@@ -40,13 +41,13 @@ func Run(tasks []Task, numWorkers, maxErrors int) error {
 	close(jobQueue)
 
 	jobResult := make(chan taskResult, len(tasks))
-	massBreak := make(chan struct{})
+	var wgDone sync.WaitGroup
 	breakFlag := false
 	defer close(jobResult)
-	defer close(massBreak)
 
+	wgDone.Add(numWorkers)
 	for i := 1; i <= numWorkers; i++ {
-		go worker(fmt.Sprint("Worker", i), &jobQueue, &jobResult, &massBreak, &breakFlag)
+		go worker(fmt.Sprint("Worker", i), &jobQueue, &jobResult, &wgDone, &breakFlag)
 	}
 
 	successCount := 0
@@ -64,9 +65,7 @@ func Run(tasks []Task, numWorkers, maxErrors int) error {
 	}
 
 	breakFlag = true
-	for i := 1; i <= numWorkers; i++ {
-		massBreak <- struct{}{}
-	}
+	wgDone.Wait()
 
 	if errorCount >= maxErrors {
 		ErrErrorsLimitExceeded = errors.New("Errors limit [" + fmt.Sprint(maxErrors) + "] exceeded:" + errorStream)
@@ -76,17 +75,15 @@ func Run(tasks []Task, numWorkers, maxErrors int) error {
 	return nil
 }
 
-func worker(name string, jobQueue *chan taskJob, jobResult *chan taskResult, breaker *chan struct{}, breakFlag *bool) {
+func worker(name string, jobQueue *chan taskJob, jobResult *chan taskResult, wgDone *sync.WaitGroup, breakFlag *bool) {
 	for {
-		select {
-		case <-(*breaker):
-			return
-		case jq, ok := <-(*jobQueue):
-			if ok && !*breakFlag {
-				(*jobResult) <- taskResult{jq.idx, jq.task(), name}
-			}
+		jq, ok := <-(*jobQueue)
+		if !ok || *breakFlag {
+			break
 		}
+		(*jobResult) <- taskResult{jq.idx, jq.task(), name}
 	}
+	wgDone.Done()
 }
 
 func getFuncName(i interface{}) string {

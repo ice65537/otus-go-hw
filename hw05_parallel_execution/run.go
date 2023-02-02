@@ -23,13 +23,6 @@ type taskResult struct {
 	worker string
 }
 
-type breaker struct {
-	sync.RWMutex
-	flag bool
-}
-
-// var taskQueue chan Task
-
 // Run starts tasks in numWorkers goroutines and stops its work when receiving maxErrors errors from tasks.
 func Run(tasks []Task, numWorkers, maxErrors int) error {
 	if numWorkers <= 1 {
@@ -45,21 +38,20 @@ func Run(tasks []Task, numWorkers, maxErrors int) error {
 	}
 	close(jobQueue)
 
-	jobResult := make(chan taskResult, len(tasks))
+	jobResults := make([]<-chan taskResult, numWorkers)
 	var wgDone sync.WaitGroup
-	breaker := breaker{flag: false}
-	defer close(jobResult)
+	breaker := make(chan struct{})
 
 	wgDone.Add(numWorkers)
-	for i := 1; i <= numWorkers; i++ {
-		go worker(fmt.Sprint("Worker", i), &jobQueue, &jobResult, &wgDone, &breaker)
+	for i := 0; i < numWorkers; i++ {
+		jobResults[i] = worker(fmt.Sprint("Worker", i+1), jobQueue, &wgDone, breaker, len(tasks))
 	}
 
 	successCount := 0
 	errorCount := 0
 	errorStream := ""
 	for successCount+errorCount < len(tasks) && errorCount < maxErrors {
-		jr := <-jobResult
+		jr := getNextWorkerResult(jobResults)
 		jobDesc := fmt.Sprintf("\r\nTask[%d]{%s} by %s", jr.idx, getFuncName(tasks[jr.idx]), jr.worker)
 		if jr.err != nil {
 			errorCount++
@@ -69,9 +61,7 @@ func Run(tasks []Task, numWorkers, maxErrors int) error {
 		}
 	}
 
-	breaker.Lock()
-	breaker.flag = true
-	breaker.Unlock()
+	close(breaker)
 	wgDone.Wait()
 
 	if errorCount >= maxErrors {
@@ -82,20 +72,37 @@ func Run(tasks []Task, numWorkers, maxErrors int) error {
 	return nil
 }
 
-func worker(name string, jobQueue *chan taskJob, jobResult *chan taskResult, wgDone *sync.WaitGroup, brk *breaker) {
-	for {
-		jq, ok := <-(*jobQueue)
-		brk.RLock()
-		flag := brk.flag
-		brk.RUnlock()
-		if !ok || flag {
-			break
+func worker(name string, jobQueue <-chan taskJob, wgDone *sync.WaitGroup, brk <-chan struct{}, bufferSize int) <-chan taskResult {
+	jobResult := make(chan taskResult, bufferSize)
+	go func() {
+		defer close(jobResult)
+		defer wgDone.Done()
+		for {
+			select {
+			case jq, ok := <-jobQueue:
+				if ok {
+					jobResult <- taskResult{jq.idx, jq.task(), name}
+				}
+			case <-brk:
+				return
+			}
 		}
-		(*jobResult) <- taskResult{jq.idx, jq.task(), name}
-	}
-	wgDone.Done()
+	}()
+	return jobResult
 }
 
 func getFuncName(i interface{}) string {
 	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
+}
+
+func getNextWorkerResult(jobResults []<-chan taskResult) taskResult {
+	for {
+		for _, ch := range jobResults {
+			select {
+			case jobResult := <-ch:
+				return jobResult
+			default:
+			}
+		}
+	}
 }

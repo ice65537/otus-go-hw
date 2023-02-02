@@ -72,7 +72,9 @@ func Run(tasks []Task, numWorkers, maxErrors int) error {
 	return nil
 }
 
-func worker(name string, jobQueue <-chan taskJob, wgDone *sync.WaitGroup, brk <-chan struct{}, bufferSize int) <-chan taskResult {
+func worker(name string, jobQueue <-chan taskJob, wgDone *sync.WaitGroup,
+	brk <-chan struct{}, bufferSize int,
+) <-chan taskResult {
 	jobResult := make(chan taskResult, bufferSize)
 	go func() {
 		defer close(jobResult)

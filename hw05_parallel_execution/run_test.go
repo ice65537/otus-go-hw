@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"os"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -35,7 +36,7 @@ func TestRun(t *testing.T) {
 		err := Run(tasks, workersCount, maxErrorsCount)
 
 		require.Truef(t, errors.Is(err, ErrErrorsLimitExceeded), "actual err - %v", err)
-		// require.LessOrEqual(t, runTasksCount, int32(2*workersCount+maxErrorsCount), "extra tasks were started")
+		require.LessOrEqual(t, runTasksCount, int32(2*workersCount+maxErrorsCount), "extra tasks were started")
 	})
 
 	t.Run("tasks without errors", func(t *testing.T) {
@@ -93,7 +94,7 @@ func TestRun(t *testing.T) {
 		workersCount := 300
 		maxErrorsCount := 20
 
-		err := Run(tasks, workersCount, maxErrorsCount)
+		err := RunLogged(tasks, workersCount, maxErrorsCount, os.Stdout)
 		require.NoError(t, err)
 		require.Equal(t, runTasksCount, int32(tasksCount), "not all tasks were completed")
 	})
@@ -124,7 +125,7 @@ func TestRun(t *testing.T) {
 		workersCount := -45     // equal to 1
 		maxErrorsCount := -1345 // ignore errors
 		start := time.Now()
-		err := Run(tasks, workersCount, maxErrorsCount)
+		err := RunLogged(tasks, workersCount, maxErrorsCount, os.Stdout)
 		elapsedTime := time.Since(start)
 		require.NoError(t, err)
 		require.Equal(t, runTasksCount, int32(tasksCount), "not all tasks were completed at 1st run")
@@ -133,7 +134,7 @@ func TestRun(t *testing.T) {
 		workersCount = 50
 		maxErrorsCount = -1 // ignore errors
 		start = time.Now()
-		err = Run(tasks, workersCount, maxErrorsCount)
+		err = RunLogged(tasks, workersCount, maxErrorsCount, os.Stdout)
 		elapsedTime2 := time.Since(start)
 		require.NoError(t, err)
 		require.Equal(t, runTasksCount, int32(tasksCount), "not all tasks were completed at 2nd run")

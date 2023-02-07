@@ -125,7 +125,7 @@ func TestRun(t *testing.T) {
 		workersCount := -45     // equal to 1
 		maxErrorsCount := -1345 // ignore errors
 		start := time.Now()
-		err := RunLogged(tasks, workersCount, maxErrorsCount, os.Stdout)
+		err := Run(tasks, workersCount, maxErrorsCount)
 		elapsedTime := time.Since(start)
 		require.NoError(t, err)
 		require.Equal(t, runTasksCount, int32(tasksCount), "not all tasks were completed at 1st run")
@@ -134,7 +134,7 @@ func TestRun(t *testing.T) {
 		workersCount = 50
 		maxErrorsCount = -1 // ignore errors
 		start = time.Now()
-		err = RunLogged(tasks, workersCount, maxErrorsCount, os.Stdout)
+		err = Run(tasks, workersCount, maxErrorsCount)
 		elapsedTime2 := time.Since(start)
 		require.NoError(t, err)
 		require.Equal(t, runTasksCount, int32(tasksCount), "not all tasks were completed at 2nd run")

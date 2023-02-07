@@ -61,7 +61,6 @@ func RunLogged(tasks []Task, numWorkers, maxErrors int, out io.StringWriter) err
 
 	successCount := 0
 	errorCount := 0
-	// jobStream := ""
 	for successCount+errorCount < len(tasks) && errorCount < maxErrors {
 		jr := getNextWorkerResult(jobResults)
 		jobMess := fmt.Sprintf("\r\nTask[%d]{%s} by %s", jr.idx, getFuncName(tasks[jr.idx]), jr.worker)

@@ -9,44 +9,33 @@ type (
 type Stage func(in In) (out Out)
 
 func ExecutePipeline(in In, done In, stages ...Stage) Out {
-	out := make([]Out, len(stages)+1)
-	out[0] = in
-	for i, stage := range stages {
-		select {
-		case <-done:
-			return nil
-		default:
-		}
-		out[i+1] = stage(out[i])
+	tmp := pre(in, done)
+	for _, stage := range stages {
+		tmp = stage(pre(tmp, done))
 	}
-	return out[len(stages)]
+	return tmp
 }
 
-/*func worker(name string, jobQueue In, jobDo Stage, brk In, bufferSize int) Out {
-	var jq, jr interface{}
-	jobResult := make(Bi, bufferSize)
+func pre(in, done In) Out {
+	out := make(Bi, 100)
 	go func() {
-		defer close(jobResult)
-		jget := false
+		defer close(out)
 		for {
 			select {
-			case <-brk:
+			case <-done:
 				return
-			case jq, jget = <-jobQueue:
-			}
-			if jget {
-				jr = jobDo(jq)
-				select {
-				case <-brk:
+			case x, ok := <-in:
+				if ok {
+					select {
+					case out <- x:
+					case <-done:
+						return
+					}
+				} else {
 					return
-				case jobResult <- jr:
 				}
 			}
 		}
 	}()
-	return jobResult
+	return out
 }
-
-func getFuncName(i interface{}) string {
-	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
-}*/

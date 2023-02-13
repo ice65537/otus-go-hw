@@ -26,4 +26,4 @@ ehthumbs.db
 Thumbs.db
 .vscode/
 *.bak
-.test*/
+.test_by_build/

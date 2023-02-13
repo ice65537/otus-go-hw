@@ -78,8 +78,7 @@ func RunLogged(tasks []Task, numWorkers, maxErrors int, out io.StringWriter) err
 		}
 		completeCount++
 		//
-		//То самое логирование, которого нет в задании, но мне оно нужно и я его оставлю
-		//Начало
+		// То самое логирование, которого нет в задании, но мне оно нужно и я его оставлю - Начало
 		jobMess := fmt.Sprintf("\r\nTask[%d]{%s} by %s", jr.idx, getFuncName(tasks[jr.idx]), jr.worker)
 		if jr.err != nil {
 			jobMess += " failed"
@@ -89,8 +88,7 @@ func RunLogged(tasks []Task, numWorkers, maxErrors int, out io.StringWriter) err
 		if out != nil {
 			out.WriteString(jobMess)
 		}
-		//Конец
-		//То самое логирование, которого нет в задании, но мне оно нужно и я его оставлю
+		// Конец - То самое логирование, которого нет в задании, но мне оно нужно и я его оставлю
 	}
 
 	close(breaker)
@@ -156,7 +154,7 @@ func getNextWorkerResult(jobResults []<-chan taskResult) taskResult {
 			}
 		}
 		if countClosed == len(jobResults) {
-			return taskResult{idx: -1} //Таким способом сообщаю, что весь массив каналов закрылся
+			return taskResult{idx: -1} // Таким способом сообщаю, что весь массив каналов закрылся
 		}
 	}
 }

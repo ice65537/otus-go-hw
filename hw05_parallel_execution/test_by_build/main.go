@@ -9,6 +9,7 @@ import (
 	hwpe "github.com/ice65537/otus-go-hw/hw05_parallel_execution"
 )
 
+//Этот файл я сделал, чтобы понять как подключить написанную библиотеку к другому exe-шнику. Можно не проверять в рамках ДЗ hw05_parallel_execution.
 func main() {
 	tasksCount := 100
 	tasks := make([]hwpe.Task, 0, tasksCount)

@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"runtime"
 	"sync"
+	"sync/atomic"
 )
 
 var ErrErrorsLimitExceeded = errors.New("errors limit exceeded")
@@ -55,31 +56,47 @@ func RunLogged(tasks []Task, numWorkers, maxErrors int, out io.StringWriter) err
 	breaker := make(chan struct{})
 
 	wgDone.Add(numWorkers)
+	var errorCount int32 = 0
+	errCheck := func(inErr error) bool {
+		if inErr != nil {
+			atomic.AddInt32(&errorCount, 1)
+		}
+		if atomic.LoadInt32(&errorCount) >= int32(maxErrors) {
+			return false
+		}
+		return true
+	}
 	for i := 0; i < numWorkers; i++ {
-		jobResults[i] = worker(fmt.Sprint("Worker", i+1), jobQueue, &wgDone, breaker, workerBufferSize)
+		jobResults[i] = worker(fmt.Sprint("Worker", i+1), jobQueue, &wgDone, breaker, errCheck, workerBufferSize)
 	}
 
-	successCount := 0
-	errorCount := 0
-	for successCount+errorCount < len(tasks) && errorCount < maxErrors {
+	completeCount := 0
+	for completeCount < len(tasks) {
 		jr := getNextWorkerResult(jobResults)
+		if jr.idx < 0 {
+			break // Все worker-ы закрыли свои каналы досрочно
+		}
+		completeCount++
+		//
+		//То самое логирование, которого нет в задании, но мне оно нужно и я его оставлю
+		//Начало
 		jobMess := fmt.Sprintf("\r\nTask[%d]{%s} by %s", jr.idx, getFuncName(tasks[jr.idx]), jr.worker)
 		if jr.err != nil {
-			errorCount++
 			jobMess += " failed"
 		} else {
-			successCount++
 			jobMess += " completed"
 		}
 		if out != nil {
 			out.WriteString(jobMess)
 		}
+		//Конец
+		//То самое логирование, которого нет в задании, но мне оно нужно и я его оставлю
 	}
 
 	close(breaker)
 	wgDone.Wait()
 
-	if errorCount >= maxErrors {
+	if errorCount >= int32(maxErrors) {
 		return ErrErrorsLimitExceeded
 	}
 
@@ -88,7 +105,7 @@ func RunLogged(tasks []Task, numWorkers, maxErrors int, out io.StringWriter) err
 
 func worker(name string, jobQueue <-chan taskJob,
 	wgDone *sync.WaitGroup, brk <-chan struct{},
-	bufferSize int,
+	errCheck func(error) bool, bufferSize int,
 ) <-chan taskResult {
 	var jq taskJob
 	var jr taskResult
@@ -104,11 +121,15 @@ func worker(name string, jobQueue <-chan taskJob,
 			case jq, jget = <-jobQueue:
 			}
 			if jget {
-				jr = taskResult{jq.idx, jq.task(), name}
+				err := jq.task()
+				jr = taskResult{jq.idx, err, name}
 				select {
 				case <-brk:
 					return
 				case jobResult <- jr:
+					if !errCheck(err) {
+						return
+					}
 				}
 			}
 		}
@@ -122,12 +143,20 @@ func getFuncName(i interface{}) string {
 
 func getNextWorkerResult(jobResults []<-chan taskResult) taskResult {
 	for {
+		countClosed := 0
 		for _, ch := range jobResults {
 			select {
-			case jobResult := <-ch:
-				return jobResult
+			case jobResult, ok := <-ch:
+				if ok {
+					return jobResult
+				} else {
+					countClosed++
+				}
 			default:
 			}
+		}
+		if countClosed == len(jobResults) {
+			return taskResult{idx: -1} //Таким способом сообщаю, что весь массив каналов закрылся
 		}
 	}
 }

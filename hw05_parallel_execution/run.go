@@ -56,7 +56,7 @@ func RunLogged(tasks []Task, numWorkers, maxErrors int, out io.StringWriter) err
 	breaker := make(chan struct{})
 
 	wgDone.Add(numWorkers)
-	var errorCount int32 = 0
+	var errorCount int32
 	errCheck := func(inErr error) bool {
 		if inErr != nil {
 			atomic.AddInt32(&errorCount, 1)
@@ -147,9 +147,8 @@ func getNextWorkerResult(jobResults []<-chan taskResult) taskResult {
 			case jobResult, ok := <-ch:
 				if ok {
 					return jobResult
-				} else {
-					countClosed++
 				}
+				countClosed++
 			default:
 			}
 		}

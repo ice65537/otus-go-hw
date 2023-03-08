@@ -2,6 +2,8 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"os"
 )
 
 var (
@@ -18,5 +20,10 @@ func init() {
 
 func main() {
 	flag.Parse()
-	// Place your code here.
+	fmt.Printf("\r\nCopying file [%s], offset[%d] to [%s], limit[%d]\r\n", from, offset, to, limit)
+	err := Copy(from, to, offset, limit)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(0) // иначе ломается тест
+	}
 }

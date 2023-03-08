@@ -21,5 +21,9 @@ cmp out.txt testdata/out_offset100_limit1000.txt
 ./go-cp -from testdata/input.txt -to out.txt -offset 6000 -limit 1000
 cmp out.txt testdata/out_offset6000_limit1000.txt
 
+./go-cp -from /dev/urandom -to /dev/null -offset 0 -limit 0
+
+./go-cp -from testdata/input.txt -to out.txt -offset 600000000000000000 -limit 0
+
 rm -f go-cp out.txt
 echo "PASS"

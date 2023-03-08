@@ -17,7 +17,7 @@ var (
 )
 
 func Copy(fromPath, toPath string, offset, limit int64) error {
-	var bufferSize int = 100
+	var bufferSize int
 
 	// Открытие файла
 	source, err := os.Open(fromPath)
@@ -56,6 +56,7 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 	}
 
 	// Определение размера буфера для чтения
+	bufferSize = 100
 	osOut, err := exec.Command("stat", "--printf=%o", fromPath).Output()
 	// osOut, err := exec.Command("ls", "-l").Output()
 	if err != nil {

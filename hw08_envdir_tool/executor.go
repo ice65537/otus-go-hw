@@ -18,7 +18,7 @@ func RunCmd(cmd []string, env Environment) (returnCode int) {
 		}
 	}
 
-	cmdX := exec.Command(cmd[0], cmd[1:]...)
+	cmdX := exec.Command(cmd[0], cmd[1:]...) // #nosec G204
 	cmdX.Env = os.Environ()
 	cmdX.Stderr = os.Stderr
 	cmdX.Stdin = os.Stdin

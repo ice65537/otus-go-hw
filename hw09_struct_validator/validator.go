@@ -73,7 +73,7 @@ func validateX(u interface{}, nameParent string, errs *ValidationErrors) {
 		}
 		if len(chkMsgArr) > 0 {
 			for _, chkMsg := range chkMsgArr {
-				*errs = append(*errs, ValidationError{Field: nameParent + "." + f.Name, Err: errors.New(chkMsg)})
+				*errs = append(*errs, ValidationError{Field: strings.TrimLeft(nameParent+"."+f.Name, "."), Err: errors.New(chkMsg)})
 			}
 		}
 	}

@@ -3,8 +3,6 @@ package hw09structvalidator
 import (
 	"errors"
 	"reflect"
-	"regexp"
-	"strconv"
 	"strings"
 )
 
@@ -61,6 +59,7 @@ func validateX(u interface{}, nameParent string, errs *ValidationErrors) {
 	v := reflect.ValueOf(u)
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
+		fnameFull := strings.TrimLeft(nameParent+"."+f.Name, ".")
 		tag := f.Tag.Get("validate")
 		if tag == "" {
 			continue
@@ -70,7 +69,7 @@ func validateX(u interface{}, nameParent string, errs *ValidationErrors) {
 		switch f.Type.Kind() {
 		case reflect.Struct:
 			if tag == "nested" {
-				validateX(fv.Interface(), strings.TrimLeft(nameParent+"."+f.Name, "."), errs)
+				validateX(fv.Interface(), fnameFull, errs)
 			}
 		case reflect.String:
 			strv := make([]string, 1)
@@ -92,64 +91,27 @@ func validateX(u interface{}, nameParent string, errs *ValidationErrors) {
 		}
 		if len(chkErrArr) > 0 {
 			for _, chkErr := range chkErrArr {
-				*errs = append(*errs, ValidationError{Field: strings.TrimLeft(nameParent+"."+f.Name, "."), Err: chkErr})
+				*errs = append(*errs, ValidationError{Field: fnameFull, Err: chkErr})
 			}
 		}
 	}
 }
 
 func intValidate(intArray []int, tags []string) []error {
-	var fCheck func(x int) error
+	var fCheck func(x int, info string) error
 	outErr := make([]error, 0)
 	for _, tag := range tags {
 		tagParsed := strings.Split(tag, ":")
 		switch tagParsed[0] {
 		case "min":
-			fCheck = func(x int) error {
-				min, err := strconv.Atoi(tagParsed[1])
-				if err != nil {
-					return err
-				}
-				if x < min {
-					// fmt.Printf("Value [%d] less than min=[%d]\r\n", x, min)
-					return ErrIntMin
-				}
-				return nil
-			}
+			fCheck = intCheckMin
 		case "max":
-			fCheck = func(x int) error {
-				max, err := strconv.Atoi(tagParsed[1])
-				if err != nil {
-					return err
-				}
-				if x > max {
-					// fmt.Printf("Value [%d] more than max=[%d]\r\n", x, max)
-					return ErrIntMax
-				}
-				return nil
-			}
+			fCheck = intCheckMax
 		case "in":
-			fCheck = func(x int) error {
-				var intSet map[int]struct{}
-				intSetStr := strings.Split(tagParsed[1], ",")
-				intSet = make(map[int]struct{})
-				for _, v := range intSetStr {
-					idx, err := strconv.Atoi(v)
-					if err != nil {
-						return err
-					}
-					intSet[idx] = struct{}{}
-				}
-				_, ok := intSet[x]
-				if !ok {
-					// fmt.Printf("Value [%d] not found in dictionary[%s]\r\n", x, tagParsed[1])
-					return ErrIntNotFound
-				}
-				return nil
-			}
+			fCheck = intCheckDict
 		}
 		for _, v := range intArray {
-			errChk := fCheck(v)
+			errChk := fCheck(v, tagParsed[1])
 			if errChk != nil {
 				outErr = append(outErr, errChk)
 			}
@@ -159,53 +121,20 @@ func intValidate(intArray []int, tags []string) []error {
 }
 
 func stringValidate(strArray []string, tags []string) []error {
-	var fCheck func(x string) error
+	var fCheck func(x string, info string) error
 	outErr := make([]error, 0)
 	for _, tag := range tags {
 		tagParsed := strings.Split(tag, ":")
 		switch tagParsed[0] {
 		case "len":
-			fCheck = func(x string) error {
-				exactLength, err := strconv.Atoi(tagParsed[1])
-				if err != nil {
-					return err
-				}
-				if len(x) != exactLength {
-					// fmt.Printf("Length of string [%s] not equal to [%d]\r\n", x, exactLength)
-					return ErrStrLen
-				}
-				return nil
-			}
+			fCheck = stringCheckLen
 		case "regexp":
-			fCheck = func(x string) error {
-				rex, err := regexp.Compile(tagParsed[1])
-				if err != nil {
-					return err
-				}
-				if !rex.MatchString(x) {
-					// fmt.Printf("Value [%s] not succeeded to regexp [%s]\r\n", x, tagParsed[1])
-					return ErrStrRxp
-				}
-				return nil
-			}
+			fCheck = stringCheckRxp
 		case "in":
-			fCheck = func(x string) error {
-				var strSet map[string]struct{}
-				strSetSlice := strings.Split(tagParsed[1], ",")
-				strSet = make(map[string]struct{})
-				for _, idx := range strSetSlice {
-					strSet[idx] = struct{}{}
-				}
-				_, ok := strSet[x]
-				if !ok {
-					// fmt.Printf("Value [%s] not found in dictionary[%s]\r\n", x, tagParsed[1])
-					return ErrStrNotFound
-				}
-				return nil
-			}
+			fCheck = stringCheckDict
 		}
 		for _, v := range strArray {
-			errChk := fCheck(v)
+			errChk := fCheck(v, tagParsed[1])
 			if errChk != nil {
 				outErr = append(outErr, errChk)
 			}

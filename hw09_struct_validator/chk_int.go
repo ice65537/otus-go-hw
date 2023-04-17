@@ -38,8 +38,7 @@ func intCheckDict(x int, info string) error {
 		}
 		intSet[idx] = struct{}{}
 	}
-	_, ok := intSet[x]
-	if !ok {
+	if _, ok := intSet[x]; !ok {
 		return ErrIntNotFound
 	}
 	return nil

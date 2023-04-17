@@ -35,8 +35,7 @@ func stringCheckDict(x string, info string) error {
 	for _, idx := range strSetSlice {
 		strSet[idx] = struct{}{}
 	}
-	_, ok := strSet[x]
-	if !ok {
+	if _, ok := strSet[x]; !ok {
 		return ErrStrNotFound
 	}
 	return nil

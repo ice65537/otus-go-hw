@@ -2,7 +2,6 @@ package hw09structvalidator
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -34,6 +33,15 @@ func (v ValidationErrors) Error() string {
 	return strings.TrimRight(str, "\r\n")
 }
 
+func (v ValidationErrors) Is(x error) bool {
+	for _, ve := range v {
+		if errors.Is(ve.Err, x) {
+			return true
+		}
+	}
+	return false
+}
+
 func Validate(v interface{}) error {
 	errs := make(ValidationErrors, 0)
 	validateX(v, "", &errs)
@@ -45,7 +53,6 @@ func Validate(v interface{}) error {
 
 func validateX(u interface{}, nameParent string, errs *ValidationErrors) {
 	var chkErrArr []error
-	fmt.Println("Structure->" + nameParent)
 	t := reflect.TypeOf(u)
 	if t.Kind() != reflect.Struct {
 		*errs = append(*errs, ValidationError{Field: nameParent, Err: ErrNotAStructure})
@@ -60,10 +67,11 @@ func validateX(u interface{}, nameParent string, errs *ValidationErrors) {
 		}
 		tags := strings.Split(tag, "|")
 		fv := v.Field(i)
-		fmt.Println("Field--->" + f.Name)
 		switch f.Type.Kind() {
 		case reflect.Struct:
-			validateX(fv.Interface(), strings.TrimLeft(nameParent+"."+f.Name, "."), errs)
+			if tag == "nested" {
+				validateX(fv.Interface(), strings.TrimLeft(nameParent+"."+f.Name, "."), errs)
+			}
 		case reflect.String:
 			strv := make([]string, 1)
 			strv[0] = fv.String()
@@ -103,7 +111,7 @@ func intValidate(intArray []int, tags []string) []error {
 					return err
 				}
 				if x < min {
-					fmt.Printf("Value [%d] less than min=[%d]\r\n", x, min)
+					// fmt.Printf("Value [%d] less than min=[%d]\r\n", x, min)
 					return ErrIntMin
 				}
 				return nil
@@ -115,7 +123,7 @@ func intValidate(intArray []int, tags []string) []error {
 					return err
 				}
 				if x > max {
-					fmt.Printf("Value [%d] more than max=[%d]\r\n", x, max)
+					// fmt.Printf("Value [%d] more than max=[%d]\r\n", x, max)
 					return ErrIntMax
 				}
 				return nil
@@ -134,7 +142,7 @@ func intValidate(intArray []int, tags []string) []error {
 				}
 				_, ok := intSet[x]
 				if !ok {
-					fmt.Printf("Value [%d] not found in dictionary[%s]\r\n", x, tagParsed[1])
+					// fmt.Printf("Value [%d] not found in dictionary[%s]\r\n", x, tagParsed[1])
 					return ErrIntNotFound
 				}
 				return nil
@@ -163,7 +171,7 @@ func stringValidate(strArray []string, tags []string) []error {
 					return err
 				}
 				if len(x) != exactLength {
-					fmt.Printf("Length of string [%s] not equal to [%d]\r\n", x, exactLength)
+					// fmt.Printf("Length of string [%s] not equal to [%d]\r\n", x, exactLength)
 					return ErrStrLen
 				}
 				return nil
@@ -175,7 +183,7 @@ func stringValidate(strArray []string, tags []string) []error {
 					return err
 				}
 				if !rex.MatchString(x) {
-					fmt.Printf("Value [%s] not succeeded to regexp [%s]\r\n", x, tagParsed[1])
+					// fmt.Printf("Value [%s] not succeeded to regexp [%s]\r\n", x, tagParsed[1])
 					return ErrStrRxp
 				}
 				return nil
@@ -190,7 +198,7 @@ func stringValidate(strArray []string, tags []string) []error {
 				}
 				_, ok := strSet[x]
 				if !ok {
-					fmt.Printf("Value [%s] not found in dictionary[%s]\r\n", x, tagParsed[1])
+					// fmt.Printf("Value [%s] not found in dictionary[%s]\r\n", x, tagParsed[1])
 					return ErrStrNotFound
 				}
 				return nil
@@ -205,21 +213,3 @@ func stringValidate(strArray []string, tags []string) []error {
 	}
 	return outErr
 }
-
-/*Необходимо реализовать следующие валидаторы:
-- Для строк:
-    * `len:32` - длина строки должна быть ровно 32 символа;
-    * `regexp:\\d+` - согласно регулярному выражению строка должна состоять из цифр
-    (`\\` - экранирование слэша);
-    * `in:foo,bar` - строка должна входить в множество строк {"foo", "bar"}.
-- Для чисел:
-    * `min:10` - число не может быть меньше 10;
-    * `max:20` - число не может быть больше 20;
-    * `in:256,1024` - число должно входить в множество чисел {256, 1024};
-- Для слайсов валидируется каждый элемент слайса.
-
-_При желании можно дополнительно добавить парочку новых правил (на ваше усмотрение)._
-
-Допускается комбинация валидаторов по логическому "И" с помощью `|`, например:
-* `min:0|max:10` - число должно находится в пределах [0, 10];
-* `regexp:\\d+|len:20` - строка должна состоять из цифр и иметь длину 20.*/

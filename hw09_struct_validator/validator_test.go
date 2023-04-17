@@ -25,6 +25,12 @@ type (
 
 	App struct {
 		Version string `validate:"len:5"`
+		Usr     User   `validate:"nested"`
+	}
+
+	App2 struct {
+		Version string `validate:"len:5"`
+		Usr     User
 	}
 
 	Token struct {
@@ -45,11 +51,53 @@ func TestValidate(t *testing.T) {
 		expectedErr error
 	}{
 		{
-			User{ID: "12345678901234567890123456789055555", Age: 22, Email: "a@b.c", Role: "stuff"},
-			ValidationErrors{ValidationError{Field: "ID", Err: ErrStrLen}},
+			"---",
+			ErrNotAStructure,
 		},
-		// ...
-		// Place your code here.
+		{
+			User{ID: "-", Age: 22, Email: "a@b.c", Role: "stuff"},
+			ErrStrLen,
+		},
+		{
+			User{ID: "123456789012345678901234567890666666", Age: 22, Email: "a@b.c", Role: "stuff", Phones: []string{"11111111111", "2"}},
+			ErrStrLen,
+		},
+		{
+			User{ID: "123456789012345678901234567890666666", Age: 22, Email: "a@b@c", Role: "stuff"},
+			ErrStrRxp,
+		},
+		{
+			User{ID: "123456789012345678901234567890666666", Age: 22, Email: "a@b.c", Role: "-"},
+			ErrStrNotFound,
+		},
+		{
+			User{ID: "123456789012345678901234567890666666", Age: 15, Email: "a@b.c", Role: "admin"},
+			ErrIntMin,
+		},
+		{
+			User{ID: "123456789012345678901234567890666666", Age: 51, Email: "a@b.c", Role: "stuff"},
+			ErrIntMax,
+		},
+		{
+			User{ID: "123456789012345678901234567890666666", Age: 50, Email: "a@b.c", Role: "stuff"},
+			nil,
+		},
+		{
+			Response{Code: 666, Body: "stuff"},
+			ErrIntNotFound,
+		},
+		{
+			Token{Header: []byte{0, 34, 234, 234}, Payload: []byte{0, 34, 234, 234}, Signature: []byte{0, 34, 234, 234}},
+			nil,
+		},
+		{
+			App{Version: "XXXXX", Usr: User{ID: "123456789012345678901234567890666666", Age: 51, Email: "a@b.c", Role: "stuff"}},
+			ErrIntMax,
+		},
+		{
+			App2{Version: "XXXXX", Usr: User{ID: "123456789012345678901234567890666666", Age: 51, Email: "a@b.c", Role: "stuff"}},
+			nil,
+		},
 	}
 
 	for i, tt := range tests {
@@ -57,7 +105,7 @@ func TestValidate(t *testing.T) {
 			tt := tt
 			t.Parallel()
 			err := Validate(tt.in)
-			require.Truef(t, errors.Is(err, tt.expectedErr), "actual err - %v", err)
+			require.Truef(t, errors.Is(err, tt.expectedErr), "actual err = [%v] but expected error was [%v]", err, tt.expectedErr)
 			_ = tt
 		})
 	}

@@ -9,6 +9,16 @@ import (
 	"strings"
 )
 
+var (
+	ErrNotAStructure = errors.New("not a structure")
+	ErrIntMin        = errors.New("value less than min")
+	ErrIntMax        = errors.New("int value more than max")
+	ErrIntNotFound   = errors.New("value not found in dictionary")
+	ErrStrLen        = errors.New("length of string not equal to ethalon")
+	ErrStrRxp        = errors.New("value not succeeded to regexp")
+	ErrStrNotFound   = errors.New("string value not found in dictionary")
+)
+
 type ValidationError struct {
 	Field string
 	Err   error
@@ -34,10 +44,11 @@ func Validate(v interface{}) error {
 }
 
 func validateX(u interface{}, nameParent string, errs *ValidationErrors) {
-	var chkMsgArr []string
+	var chkErrArr []error
+	fmt.Println("Structure->" + nameParent)
 	t := reflect.TypeOf(u)
 	if t.Kind() != reflect.Struct {
-		*errs = append(*errs, ValidationError{Field: nameParent, Err: fmt.Errorf("%s is not a structure", t.Kind())})
+		*errs = append(*errs, ValidationError{Field: nameParent, Err: ErrNotAStructure})
 		return
 	}
 	v := reflect.ValueOf(u)
@@ -49,123 +60,128 @@ func validateX(u interface{}, nameParent string, errs *ValidationErrors) {
 		}
 		tags := strings.Split(tag, "|")
 		fv := v.Field(i)
-		fmt.Println(f.Name)
+		fmt.Println("Field--->" + f.Name)
 		switch f.Type.Kind() {
 		case reflect.Struct:
 			validateX(fv.Interface(), strings.TrimLeft(nameParent+"."+f.Name, "."), errs)
 		case reflect.String:
 			strv := make([]string, 1)
 			strv[0] = fv.String()
-			chkMsgArr = stringValidate(strv, tags)
+			chkErrArr = stringValidate(strv, tags)
 		case reflect.Int:
 			intv := make([]int, 1)
 			intv[0] = fv.Interface().(int)
-			chkMsgArr = intValidate(intv, tags)
+			chkErrArr = intValidate(intv, tags)
 		case reflect.Slice:
 			switch f.Type.Elem().Kind() {
 			case reflect.String:
-				chkMsgArr = stringValidate(fv.Interface().([]string), tags)
+				chkErrArr = stringValidate(fv.Interface().([]string), tags)
 			case reflect.Int:
-				chkMsgArr = intValidate(fv.Interface().([]int), tags)
+				chkErrArr = intValidate(fv.Interface().([]int), tags)
 			}
 		default:
 			continue
 		}
-		if len(chkMsgArr) > 0 {
-			for _, chkMsg := range chkMsgArr {
-				*errs = append(*errs, ValidationError{Field: strings.TrimLeft(nameParent+"."+f.Name, "."), Err: errors.New(chkMsg)})
+		if len(chkErrArr) > 0 {
+			for _, chkErr := range chkErrArr {
+				*errs = append(*errs, ValidationError{Field: strings.TrimLeft(nameParent+"."+f.Name, "."), Err: chkErr})
 			}
 		}
 	}
 }
 
-func intValidate(intArray []int, tags []string) []string {
-	var fCheck func(x int) string
-	outStr := make([]string, 0)
+func intValidate(intArray []int, tags []string) []error {
+	var fCheck func(x int) error
+	outErr := make([]error, 0)
 	for _, tag := range tags {
 		tagParsed := strings.Split(tag, ":")
 		switch tagParsed[0] {
 		case "min":
-			fCheck = func(x int) string {
+			fCheck = func(x int) error {
 				min, err := strconv.Atoi(tagParsed[1])
 				if err != nil {
-					return err.Error()
+					return err
 				}
 				if x < min {
-					return fmt.Sprintf("Value [%d] less than min=[%d]", x, min)
+					fmt.Printf("Value [%d] less than min=[%d]\r\n", x, min)
+					return ErrIntMin
 				}
-				return ""
+				return nil
 			}
 		case "max":
-			fCheck = func(x int) string {
+			fCheck = func(x int) error {
 				max, err := strconv.Atoi(tagParsed[1])
 				if err != nil {
-					return err.Error()
+					return err
 				}
 				if x > max {
-					return fmt.Sprintf("Value [%d] more than max=[%d]", x, max)
+					fmt.Printf("Value [%d] more than max=[%d]\r\n", x, max)
+					return ErrIntMax
 				}
-				return ""
+				return nil
 			}
 		case "in":
-			fCheck = func(x int) string {
+			fCheck = func(x int) error {
 				var intSet map[int]struct{}
 				intSetStr := strings.Split(tagParsed[1], ",")
 				intSet = make(map[int]struct{})
 				for _, v := range intSetStr {
 					idx, err := strconv.Atoi(v)
 					if err != nil {
-						return err.Error()
+						return err
 					}
 					intSet[idx] = struct{}{}
 				}
 				_, ok := intSet[x]
 				if !ok {
-					return fmt.Sprintf("Value [%d] not found in dictionary[%s]", x, tagParsed[1])
+					fmt.Printf("Value [%d] not found in dictionary[%s]\r\n", x, tagParsed[1])
+					return ErrIntNotFound
 				}
-				return ""
+				return nil
 			}
 		}
 		for _, v := range intArray {
-			errStr := fCheck(v)
-			if errStr != "" {
-				outStr = append(outStr, errStr)
+			errChk := fCheck(v)
+			if errChk != nil {
+				outErr = append(outErr, errChk)
 			}
 		}
 	}
-	return outStr
+	return outErr
 }
 
-func stringValidate(strArray []string, tags []string) []string {
-	var fCheck func(x string) string
-	outStr := make([]string, 0)
+func stringValidate(strArray []string, tags []string) []error {
+	var fCheck func(x string) error
+	outErr := make([]error, 0)
 	for _, tag := range tags {
 		tagParsed := strings.Split(tag, ":")
 		switch tagParsed[0] {
 		case "len":
-			fCheck = func(x string) string {
+			fCheck = func(x string) error {
 				exactLength, err := strconv.Atoi(tagParsed[1])
 				if err != nil {
-					return err.Error()
+					return err
 				}
 				if len(x) != exactLength {
-					return fmt.Sprintf("Length of string [%s] not equal to [%d]", x, exactLength)
+					fmt.Printf("Length of string [%s] not equal to [%d]\r\n", x, exactLength)
+					return ErrStrLen
 				}
-				return ""
+				return nil
 			}
 		case "regexp":
-			fCheck = func(x string) string {
+			fCheck = func(x string) error {
 				rex, err := regexp.Compile(tagParsed[1])
 				if err != nil {
-					return err.Error()
+					return err
 				}
 				if !rex.MatchString(x) {
-					return fmt.Sprintf("Value [%s] not succeeded to regexp [%s]", x, tagParsed[1])
+					fmt.Printf("Value [%s] not succeeded to regexp [%s]\r\n", x, tagParsed[1])
+					return ErrStrRxp
 				}
-				return ""
+				return nil
 			}
 		case "in":
-			fCheck = func(x string) string {
+			fCheck = func(x string) error {
 				var strSet map[string]struct{}
 				strSetSlice := strings.Split(tagParsed[1], ",")
 				strSet = make(map[string]struct{})
@@ -174,19 +190,20 @@ func stringValidate(strArray []string, tags []string) []string {
 				}
 				_, ok := strSet[x]
 				if !ok {
-					return fmt.Sprintf("Value [%s] not found in dictionary[%s]", x, tagParsed[1])
+					fmt.Printf("Value [%s] not found in dictionary[%s]\r\n", x, tagParsed[1])
+					return ErrStrNotFound
 				}
-				return ""
+				return nil
 			}
 		}
 		for _, v := range strArray {
-			errStr := fCheck(v)
-			if errStr != "" {
-				outStr = append(outStr, errStr)
+			errChk := fCheck(v)
+			if errChk != nil {
+				outErr = append(outErr, errChk)
 			}
 		}
 	}
-	return outStr
+	return outErr
 }
 
 /*Необходимо реализовать следующие валидаторы:

@@ -49,6 +49,7 @@ func Validate(v interface{}) error {
 	return errs
 }
 
+//nolint:exhaustive
 func validateX(u interface{}, nameParent string, errs *ValidationErrors) {
 	var chkErrArr []error
 	t := reflect.TypeOf(u)

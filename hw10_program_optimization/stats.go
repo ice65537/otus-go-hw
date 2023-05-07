@@ -60,18 +60,18 @@ func checkDomain(lvl1, email string, domainStat *DomainStat) error {
 	if len(arr1) != 2 {
 		return fmt.Errorf("bad email %s", email)
 	}
-	emailParsed_Domain := arr1[1]
-	val, ok := (*domainStat)[emailParsed_Domain]
+	emailParsedDomain := arr1[1]
+	val, ok := (*domainStat)[emailParsedDomain]
 	if ok {
-		(*domainStat)[emailParsed_Domain] = val + 1
+		(*domainStat)[emailParsedDomain] = val + 1
 		return nil
 	}
-	arr2 := strings.Split(emailParsed_Domain, ".")
+	arr2 := strings.Split(emailParsedDomain, ".")
 	if len(arr2) != 2 {
-		return fmt.Errorf("bad domain name %s", emailParsed_Domain)
+		return fmt.Errorf("bad domain name %s", emailParsedDomain)
 	}
 	if lvl1 == arr2[1] {
-		(*domainStat)[emailParsed_Domain] = 1
+		(*domainStat)[emailParsedDomain] = 1
 	}
 	return nil
 }

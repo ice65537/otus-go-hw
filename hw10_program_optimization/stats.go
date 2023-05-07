@@ -2,6 +2,7 @@ package hw10programoptimization
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -48,7 +49,7 @@ func parseRecords(r io.Reader, domainStat *DomainStat, lvl1 string) error {
 			break
 		}
 	}
-	if err == io.EOF {
+	if errors.Is(err, io.EOF) {
 		return nil
 	}
 	return err

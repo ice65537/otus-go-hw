@@ -2,50 +2,48 @@ package hw10programoptimization
 
 import (
 	"bufio"
+	"fmt"
 	"io"
-	"regexp"
 	"strings"
 
 	easyjson "github.com/mailru/easyjson"
 )
 
 type User struct {
-	ID       int
-	Name     string
-	Username string
-	Email    string
-	Phone    string
-	Password string
-	Address  string
+	//	ID       int
+	//	Name     string
+	//	Username string
+	Email string
+	// Phone    string
+	// Password string
+	// Address  string
 }
 
 type DomainStat map[string]int
 
 func GetDomainStat(r io.Reader, domain string) (result DomainStat, err error) {
-	result = make(DomainStat)
-	pusers := parseUsers(r)
-	for pu := range pusers {
-		if pu.err != nil {
-			err = pu.err
+	result = make(DomainStat, 200)
+	precs := parseRecords(r)
+	for pr := range precs {
+		if pr.err != nil {
+			err = pr.err
 			return
 		}
-		l1, l2 := getDomain(pu.value.Email)
-		if l1 == domain {
-			n := result[l2]
-			n++
-			result[l2] = n
+		err = checkDomain(domain, pr.value.Email, &result)
+		if err != nil {
+			return
 		}
 	}
 	return
 }
 
-type parsedUser struct {
+type parsedRecord struct {
 	value User
 	err   error
 }
 
-func parseUsers(r io.Reader) (resultCh chan parsedUser) {
-	resultCh = make(chan parsedUser, 1000)
+func parseRecords(r io.Reader) (resultCh chan parsedRecord) {
+	resultCh = make(chan parsedRecord, 100)
 
 	go func() {
 		defer close(resultCh)
@@ -63,24 +61,33 @@ func parseUsers(r io.Reader) (resultCh chan parsedUser) {
 			if err != nil {
 				break
 			}
-			resultCh <- parsedUser{user, nil}
+			user.Email = strings.ToLower(user.Email)
+			resultCh <- parsedRecord{user, nil}
 		}
 		if err != io.EOF {
-			resultCh <- parsedUser{User{}, err}
+			resultCh <- parsedRecord{User{}, err}
 		}
 	}()
 	return
 }
 
-var regexpDomain *regexp.Regexp
-
-func getDomain(email string) (level1, level2 string) {
-	if regexpDomain == nil {
-		regexpDomain = regexp.MustCompile(`^[\w-\.]+@([\w-]+\.)+([\w-]{2,4})$`)
+func checkDomain(domain, email string, domainStat *DomainStat) error {
+	arr1 := strings.Split(email, "@")
+	if len(arr1) != 2 {
+		return fmt.Errorf("bad email %s", email)
 	}
-	res := regexpDomain.FindStringSubmatch(strings.ToLower(email))
-	if res == nil {
-		return "", ""
+	emailParsed_Domain := arr1[1]
+	val, ok := (*domainStat)[emailParsed_Domain]
+	if ok {
+		(*domainStat)[emailParsed_Domain] = val + 1
+		return nil
 	}
-	return res[2], res[1] + res[2]
+	arr2 := strings.Split(emailParsed_Domain, ".")
+	if len(arr2) != 2 {
+		return fmt.Errorf("bad domain name %s", emailParsed_Domain)
+	}
+	if domain == arr2[1] {
+		(*domainStat)[emailParsed_Domain] = 1
+	}
+	return nil
 }

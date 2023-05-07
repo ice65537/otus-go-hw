@@ -17,7 +17,7 @@ var (
 	_ easyjson.Marshaler
 )
 
-func easyjsonE3ab7953DecodeGithubComIce65537OtusGoHwHw10ProgramOptimization(in *jlexer.Lexer, out *parsedUser) {
+func easyjsonE3ab7953DecodeGithubComIce65537OtusGoHwHw10ProgramOptimization(in *jlexer.Lexer, out *parsedRecord) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -46,7 +46,7 @@ func easyjsonE3ab7953DecodeGithubComIce65537OtusGoHwHw10ProgramOptimization(in *
 		in.Consumed()
 	}
 }
-func easyjsonE3ab7953EncodeGithubComIce65537OtusGoHwHw10ProgramOptimization(out *jwriter.Writer, in parsedUser) {
+func easyjsonE3ab7953EncodeGithubComIce65537OtusGoHwHw10ProgramOptimization(out *jwriter.Writer, in parsedRecord) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -54,26 +54,26 @@ func easyjsonE3ab7953EncodeGithubComIce65537OtusGoHwHw10ProgramOptimization(out 
 }
 
 // MarshalJSON supports json.Marshaler interface
-func (v parsedUser) MarshalJSON() ([]byte, error) {
+func (v parsedRecord) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
 	easyjsonE3ab7953EncodeGithubComIce65537OtusGoHwHw10ProgramOptimization(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
-func (v parsedUser) MarshalEasyJSON(w *jwriter.Writer) {
+func (v parsedRecord) MarshalEasyJSON(w *jwriter.Writer) {
 	easyjsonE3ab7953EncodeGithubComIce65537OtusGoHwHw10ProgramOptimization(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
-func (v *parsedUser) UnmarshalJSON(data []byte) error {
+func (v *parsedRecord) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
 	easyjsonE3ab7953DecodeGithubComIce65537OtusGoHwHw10ProgramOptimization(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
-func (v *parsedUser) UnmarshalEasyJSON(l *jlexer.Lexer) {
+func (v *parsedRecord) UnmarshalEasyJSON(l *jlexer.Lexer) {
 	easyjsonE3ab7953DecodeGithubComIce65537OtusGoHwHw10ProgramOptimization(l, v)
 }
 func easyjsonE3ab7953DecodeGithubComIce65537OtusGoHwHw10ProgramOptimization1(in *jlexer.Lexer, out *User) {
@@ -95,20 +95,8 @@ func easyjsonE3ab7953DecodeGithubComIce65537OtusGoHwHw10ProgramOptimization1(in 
 			continue
 		}
 		switch key {
-		case "ID":
-			out.ID = int(in.Int())
-		case "Name":
-			out.Name = string(in.String())
-		case "Username":
-			out.Username = string(in.String())
 		case "Email":
 			out.Email = string(in.String())
-		case "Phone":
-			out.Phone = string(in.String())
-		case "Password":
-			out.Password = string(in.String())
-		case "Address":
-			out.Address = string(in.String())
 		default:
 			in.SkipRecursive()
 		}
@@ -124,39 +112,9 @@ func easyjsonE3ab7953EncodeGithubComIce65537OtusGoHwHw10ProgramOptimization1(out
 	first := true
 	_ = first
 	{
-		const prefix string = ",\"ID\":"
-		out.RawString(prefix[1:])
-		out.Int(int(in.ID))
-	}
-	{
-		const prefix string = ",\"Name\":"
-		out.RawString(prefix)
-		out.String(string(in.Name))
-	}
-	{
-		const prefix string = ",\"Username\":"
-		out.RawString(prefix)
-		out.String(string(in.Username))
-	}
-	{
 		const prefix string = ",\"Email\":"
-		out.RawString(prefix)
+		out.RawString(prefix[1:])
 		out.String(string(in.Email))
-	}
-	{
-		const prefix string = ",\"Phone\":"
-		out.RawString(prefix)
-		out.String(string(in.Phone))
-	}
-	{
-		const prefix string = ",\"Password\":"
-		out.RawString(prefix)
-		out.String(string(in.Password))
-	}
-	{
-		const prefix string = ",\"Address\":"
-		out.RawString(prefix)
-		out.String(string(in.Address))
 	}
 	out.RawByte('}')
 }

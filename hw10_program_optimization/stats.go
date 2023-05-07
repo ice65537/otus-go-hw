@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	qjson "github.com/buger/jsonparser"
-	_ "net/http/pprof"	
 )
 
 type User struct {

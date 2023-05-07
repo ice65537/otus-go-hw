@@ -1,10 +1,9 @@
 package hw10programoptimization
 
 import (
+	"bufio"
 	"encoding/json"
-	"fmt"
 	"io"
-	"io/ioutil"
 	"regexp"
 	"strings"
 )
@@ -21,47 +20,66 @@ type User struct {
 
 type DomainStat map[string]int
 
-func GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
-	u, err := getUsers(r)
-	if err != nil {
-		return nil, fmt.Errorf("get users error: %w", err)
-	}
-	return countDomains(u, domain)
-}
-
-type users [100_000]User
-
-func getUsers(r io.Reader) (result users, err error) {
-	content, err := ioutil.ReadAll(r)
-	if err != nil {
-		return
-	}
-
-	lines := strings.Split(string(content), "\n")
-	for i, line := range lines {
-		var user User
-		if err = json.Unmarshal([]byte(line), &user); err != nil {
+func GetDomainStat(r io.Reader, domain string) (result DomainStat, err error) {
+	result = make(DomainStat)
+	pusers := parseUsers(r)
+	for pu := range pusers {
+		if pu.err != nil {
+			err = pu.err
 			return
 		}
-		result[i] = user
+		l1, l2 := getDomain(pu.value.Email)
+		if l1 == domain {
+			n := result[l2]
+			n++
+			result[l2] = n
+		}
 	}
 	return
 }
 
-func countDomains(u users, domain string) (DomainStat, error) {
-	result := make(DomainStat)
+type parsedUser struct {
+	value User
+	err   error
+}
 
-	for _, user := range u {
-		matched, err := regexp.Match("\\."+domain, []byte(user.Email))
-		if err != nil {
-			return nil, err
-		}
+func parseUsers(r io.Reader) (resultCh chan parsedUser) {
+	resultCh = make(chan parsedUser, 10)
 
-		if matched {
-			num := result[strings.ToLower(strings.SplitN(user.Email, "@", 2)[1])]
-			num++
-			result[strings.ToLower(strings.SplitN(user.Email, "@", 2)[1])] = num
+	go func() {
+		defer close(resultCh)
+		var uline []byte
+		var user User
+		var err error
+
+		br := bufio.NewReader(r)
+		for err == nil {
+			uline, err = br.ReadBytes('}')
+			if err != nil {
+				break
+			}
+			err = json.Unmarshal(uline, &user)
+			if err != nil {
+				break
+			}
+			resultCh <- parsedUser{user, nil}
 		}
+		if err != io.EOF {
+			resultCh <- parsedUser{User{}, err}
+		}
+	}()
+	return
+}
+
+var regexpDomain *regexp.Regexp
+
+func getDomain(email string) (level1, level2 string) {
+	if regexpDomain == nil {
+		regexpDomain = regexp.MustCompile(`^[\w-\.]+@([\w-]+\.)+([\w-]{2,4})$`)
 	}
-	return result, nil
+	res := regexpDomain.FindStringSubmatch(strings.ToLower(email))
+	if res == nil {
+		return "", ""
+	}
+	return res[2], res[1] + res[2]
 }

@@ -3,6 +3,7 @@ module github.com/ice65537/otus-go-hw/hw10_program_optimization
 go 1.19
 
 require (
+	github.com/buger/jsonparser v1.1.1
 	github.com/mailru/easyjson v0.7.7
 	github.com/stretchr/testify v1.8.2
 )

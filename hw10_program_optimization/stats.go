@@ -2,10 +2,11 @@ package hw10programoptimization
 
 import (
 	"bufio"
-	"encoding/json"
 	"io"
 	"regexp"
 	"strings"
+
+	easyjson "github.com/mailru/easyjson"
 )
 
 type User struct {
@@ -44,7 +45,7 @@ type parsedUser struct {
 }
 
 func parseUsers(r io.Reader) (resultCh chan parsedUser) {
-	resultCh = make(chan parsedUser, 10)
+	resultCh = make(chan parsedUser, 1000)
 
 	go func() {
 		defer close(resultCh)
@@ -58,7 +59,7 @@ func parseUsers(r io.Reader) (resultCh chan parsedUser) {
 			if err != nil {
 				break
 			}
-			err = json.Unmarshal(uline, &user)
+			err = easyjson.Unmarshal(uline, &user)
 			if err != nil {
 				break
 			}

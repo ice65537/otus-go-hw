@@ -36,8 +36,7 @@ func TestGetDomainStat(t *testing.T) {
 		require.Equal(t, DomainStat{}, result)
 	})
 
-	FullMemoryRead = true
-	UseJsonBugerVsIter = false
+	UseJSONBugerVsIter = false
 
 	t.Run("find2 'com'", func(t *testing.T) {
 		result, err := GetDomainStat(bytes.NewBufferString(data), "com")

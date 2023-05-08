@@ -2,17 +2,19 @@ package hw10programoptimization
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
 
 	qjson "github.com/buger/jsonparser"
+	jsoniter "github.com/json-iterator/go"
 )
 
 type User struct {
-	//	ID       int
-	//	Name     string
-	//	Username string
+	// ID       int
+	// Name     string
+	// Username string
 	Email string
 	// Phone    string
 	// Password string
@@ -21,10 +23,60 @@ type User struct {
 
 type DomainStat map[string]int
 
+var (
+	FullMemoryRead     bool = false
+	UseJsonBugerVsIter bool = true
+)
+
 func GetDomainStat(r io.Reader, domain string) (result DomainStat, err error) {
 	result = make(DomainStat)
-	err = parseRecords(r, &result, domain)
+	if FullMemoryRead {
+		err = parseRecords2(r, &result, domain)
+	} else {
+		err = parseRecords(r, &result, domain)
+	}
+
 	return
+}
+
+var ExpectedFileSize = 20_000_000
+
+func parseRecords2(r io.Reader, domainStat *DomainStat, lvl1 string) error {
+	var uline []byte
+	var user User
+	var err error
+
+	data := make([]byte, ExpectedFileSize+1)
+
+	n, err := io.ReadFull(r, data)
+	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) {
+		return err
+	}
+	if n > ExpectedFileSize {
+		if data, err = io.ReadAll(r); err != nil {
+			return err
+		}
+	}
+	for _, uline = range bytes.Split(data, []byte("\n")) {
+		if UseJsonBugerVsIter {
+			user.Email, err = qjson.GetString(uline, "Email")
+			if err != nil {
+				break
+			}
+		} else {
+			user.Email = ""
+			user.Email = jsoniter.Get(uline, "Email").ToString()
+			if user.Email == "" {
+				err = fmt.Errorf("email not found in %s", uline)
+				break
+			}
+		}
+		err = checkDomain(lvl1, user.Email, domainStat)
+		if err != nil {
+			break
+		}
+	}
+	return err
 }
 
 func parseRecords(r io.Reader, domainStat *DomainStat, lvl1 string) error {
@@ -38,9 +90,18 @@ func parseRecords(r io.Reader, domainStat *DomainStat, lvl1 string) error {
 		if err != nil {
 			break
 		}
-		user.Email, err = qjson.GetString(uline, "Email")
-		if err != nil {
-			break
+		if UseJsonBugerVsIter {
+			user.Email, err = qjson.GetString(uline, "Email")
+			if err != nil {
+				break
+			}
+		} else {
+			user.Email = ""
+			user.Email = jsoniter.Get(uline, "Email").ToString()
+			if user.Email == "" {
+				err = fmt.Errorf("email not found in %s", uline)
+				break
+			}
 		}
 		err = checkDomain(lvl1, user.Email, domainStat)
 		if err != nil {

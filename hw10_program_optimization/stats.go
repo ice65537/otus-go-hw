@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strings"
 
 	qjson "github.com/buger/jsonparser"
 )
@@ -33,9 +32,9 @@ func parseRecords(r io.Reader, domainStat *DomainStat, lvl1 string) error {
 	var user User
 	var err error
 
-	br := bufio.NewReader(r)
+	br := bufio.NewReaderSize(r, 1024)
 	for err == nil {
-		uline, err = br.ReadBytes('}')
+		uline, err = br.ReadSlice('}')
 		if err != nil {
 			break
 		}
@@ -43,35 +42,53 @@ func parseRecords(r io.Reader, domainStat *DomainStat, lvl1 string) error {
 		if err != nil {
 			break
 		}
-		user.Email = strings.ToLower(user.Email)
 		err = checkDomain(lvl1, user.Email, domainStat)
 		if err != nil {
 			break
 		}
 	}
 	if errors.Is(err, io.EOF) {
-		return nil
+		err = nil
 	}
 	return err
 }
 
+func parseLowerEmail(email string) (lvl1, domain, lower string) {
+	var dog, dot int
+	lowerB := make([]byte, len(email))
+	for i, v := range email {
+		if v == '@' {
+			dog = i
+		}
+		if v == '.' {
+			dot = i
+		}
+		if v >= 'A' && v <= 'Z' {
+			v += 'a' - 'A'
+		}
+		lowerB[i] = byte(v)
+	}
+	if dog == 0 || dot == 0 || dog > dot {
+		return
+	}
+	lower = string(lowerB)
+	lvl1 = lower[dot+1:]
+	domain = lower[dog+1:]
+	return
+}
+
 func checkDomain(lvl1, email string, domainStat *DomainStat) error {
-	arr1 := strings.Split(email, "@")
-	if len(arr1) != 2 {
+	plvl1, pdomain, _ := parseLowerEmail(email)
+	if plvl1 == "" {
 		return fmt.Errorf("bad email %s", email)
 	}
-	emailParsedDomain := arr1[1]
-	val, ok := (*domainStat)[emailParsedDomain]
+	val, ok := (*domainStat)[pdomain]
 	if ok {
-		(*domainStat)[emailParsedDomain] = val + 1
+		(*domainStat)[pdomain] = val + 1
 		return nil
 	}
-	arr2 := strings.Split(emailParsedDomain, ".")
-	if len(arr2) != 2 {
-		return fmt.Errorf("bad domain name %s", emailParsedDomain)
-	}
-	if lvl1 == arr2[1] {
-		(*domainStat)[emailParsedDomain] = 1
+	if lvl1 == plvl1 {
+		(*domainStat)[pdomain] = 1
 	}
 	return nil
 }

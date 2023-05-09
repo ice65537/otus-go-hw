@@ -30,7 +30,12 @@ func TestTelnetClient(t *testing.T) {
 			require.NoError(t, err)
 
 			client := NewTelnetClient(l.Addr().String(), timeout, ioutil.NopCloser(in), out)
-			require.NoError(t, client.Connect())
+			// require.NoError(t, client.Connect())
+			err = client.Connect()
+			if err != nil {
+				panic(err)
+			}
+			// Иначе при ошибке коннекта тест зависает !!!
 			defer func() { require.NoError(t, client.Close()) }()
 
 			in.WriteString("hello\n")

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"net"
 	"time"
@@ -36,12 +37,16 @@ func (cli *Cli) Connect() error {
 }
 
 func (cli *Cli) Send() error {
+	var n int
 	data, err := io.ReadAll(cli.in)
 	if err != nil {
 		return err
 	}
-	if _, err = cli.session.Write(data); err != nil {
+	if n, err = cli.session.Write(data); err != nil {
 		return err
+	}
+	if n > 0 {
+		fmt.Println(data)
 	}
 	return nil
 }
@@ -58,9 +63,12 @@ func (cli *Cli) Receive() error {
 		}
 		inBuffer = append(inBuffer, tmp[:n]...)
 	}
-	_, err = cli.out.Write(inBuffer)
+	n, err = cli.out.Write(inBuffer)
 	if err != nil {
 		return err
+	}
+	if n > 0 {
+		fmt.Println(inBuffer)
 	}
 	return nil
 }

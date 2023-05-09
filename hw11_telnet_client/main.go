@@ -22,7 +22,6 @@ func main() {
 		fmt.Println(s)
 		return
 	}
-	fmt.Println(flag.Args())
 	timeout, err := time.ParseDuration(*flagTimeout)
 	if err != nil {
 		panic(fmt.Errorf("invalid timeout value [%s]", *flagTimeout))
@@ -35,18 +34,67 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("Telnet client successfully connected to %s:%s\r\n", host, port)
+	fmt.Fprintf(os.Stdout, "Telnet client successfully connected to %s:%s\r\n", host, port)
 
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	var mtx sync.Mutex
-	go receiver(ctx, &mtx)
-	go sender(ctx, &mtx)
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go receiver(ctx, &mtx, &wg, client)
+	go sender(ctx, &mtx, &wg, client)
+	wg.Wait()
 }
 
-func receiver(ctx context.Context, mtx *sync.Mutex) {
-	return
+func receiver(ctx context.Context, mtx *sync.Mutex, wg *sync.WaitGroup, cli TelnetClient) {
+	defer wg.Done()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			fmt.Fprintf(os.Stderr, "Receive lock prepare\r\n")
+			mtx.Lock()
+			fmt.Fprintf(os.Stderr, "Receive lock get\r\n")
+			err := cli.Receive()
+			mtx.Unlock()
+			fmt.Fprintf(os.Stderr, "Receive lock release\r\n")
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Receive error: %s", err)
+				cancel()
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
 }
 
-func sender(ctx context.Context, mtx *sync.Mutex) {
-	return
+func sender(ctx context.Context, mtx *sync.Mutex, wg *sync.WaitGroup, cli TelnetClient) {
+	defer wg.Done()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			fmt.Fprintf(os.Stderr, "Send lock prepare\r\n")
+			mtx.Lock()
+			fmt.Fprintf(os.Stderr, "Send lock get\r\n")
+			err := cli.Send()
+			mtx.Unlock()
+			fmt.Fprintf(os.Stderr, "Send lock release\r\n")
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Send error: %s", err)
+				cancel()
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
 }

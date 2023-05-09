@@ -65,16 +65,9 @@ func parseRecords(r io.Reader, domainStat *DomainStat, lvl1 string) error {
 	return err
 }
 
-var (
-	MaxEmailLength = 100
-	lowerB         = make([]byte, MaxEmailLength)
-)
-
 func parseLowerEmail(email string) (lvl1, domain, lower string) {
 	var dog, dot int
-	if len(email) > MaxEmailLength {
-		return
-	}
+	lowerB := make([]byte, len(email))
 	for i, v := range email {
 		if v == '@' {
 			dog = i

@@ -1,17 +1,24 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"os"
-	"sync"
 	"time"
 )
+
+type ctxKey string
+
+const keyCancel ctxKey = "Cancel"
 
 func main() {
 	flagTimeout := flag.String("timeout", "10s", "timeout for server connect")
 	flagHelp := flag.Bool("help", false, "view help message")
+	flagHello := flag.String("hello", "WHATSUP", "hello message for server")
 	flag.Parse()
 	if *flagHelp {
 		s := `
@@ -28,44 +35,59 @@ func main() {
 	}
 	host := flag.Args()[0]
 	port := flag.Args()[1]
-	client := NewTelnetClient(host+":"+port, timeout, os.Stdin, os.Stdout)
+	scanBuffer := &bytes.Buffer{}
+	in := io.NopCloser(scanBuffer)
+	client := NewTelnetClient(host+":"+port, timeout, in, os.Stdout)
 	err = client.Connect()
 	defer client.Close()
 	if err != nil {
 		panic(err)
 	}
-	fmt.Fprintf(os.Stdout, "Telnet client successfully connected to %s:%s\r\n", host, port)
+	fmt.Fprintf(os.Stderr, "Telnet client successfully connected to %s:%s\r\n", host, port)
+	fmt.Fprintf(scanBuffer, *flagHello)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	ctx = context.WithValue(ctx, keyCancel, cancel)
 
-	var mtx sync.Mutex
-	var wg sync.WaitGroup
-	wg.Add(2)
-	go receiver(ctx, &mtx, &wg, client)
-	go sender(ctx, &mtx, &wg, client)
-	wg.Wait()
+	go receiver(ctx, client)
+	go sender(ctx, client)
+	go scanner(ctx, scanBuffer)
+	<-ctx.Done()
 }
 
-func receiver(ctx context.Context, mtx *sync.Mutex, wg *sync.WaitGroup, cli TelnetClient) {
-	defer wg.Done()
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
+func scanner(ctx context.Context, w io.Writer) {
+	defer ctx.Value(keyCancel).(context.CancelFunc)()
+	scanner := bufio.NewScanner(os.Stdin)
+	for {
+		fmt.Print("[Send]>")
+		if !scanner.Scan() {
+			break
+		}
+		if _, err := w.Write(scanner.Bytes()); err != nil {
+			fmt.Fprintf(os.Stderr, "Scan-write error: %s", err)
+			return
+		}
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			continue
+		}
+	}
+}
 
-	ticker := time.NewTicker(500 * time.Millisecond)
+func receiver(ctx context.Context, cli TelnetClient) {
+	defer ctx.Value(keyCancel).(context.CancelFunc)()
+	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
-			fmt.Fprintf(os.Stderr, "Receive lock prepare\r\n")
-			mtx.Lock()
-			fmt.Fprintf(os.Stderr, "Receive lock get\r\n")
 			err := cli.Receive()
-			mtx.Unlock()
-			fmt.Fprintf(os.Stderr, "Receive lock release\r\n")
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Receive error: %s", err)
-				cancel()
+				return
 			}
 		case <-ctx.Done():
 			return
@@ -73,25 +95,17 @@ func receiver(ctx context.Context, mtx *sync.Mutex, wg *sync.WaitGroup, cli Teln
 	}
 }
 
-func sender(ctx context.Context, mtx *sync.Mutex, wg *sync.WaitGroup, cli TelnetClient) {
-	defer wg.Done()
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	ticker := time.NewTicker(500 * time.Millisecond)
+func sender(ctx context.Context, cli TelnetClient) {
+	defer ctx.Value(keyCancel).(context.CancelFunc)()
+	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
-			fmt.Fprintf(os.Stderr, "Send lock prepare\r\n")
-			mtx.Lock()
-			fmt.Fprintf(os.Stderr, "Send lock get\r\n")
 			err := cli.Send()
-			mtx.Unlock()
-			fmt.Fprintf(os.Stderr, "Send lock release\r\n")
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Send error: %s", err)
-				cancel()
+				return
 			}
 		case <-ctx.Done():
 			return

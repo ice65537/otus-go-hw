@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"net"
 	"time"
@@ -15,15 +14,25 @@ type TelnetClient interface {
 }
 
 type Cli struct {
-	address string
-	timeout time.Duration
-	in      io.ReadCloser
-	out     io.Writer
-	session net.Conn
+	address   string
+	timeout   time.Duration
+	in        io.ReadCloser
+	out       io.Writer
+	session   net.Conn
+	inBuffer  []byte
+	outBuffer []byte
 }
 
 func NewTelnetClient(address string, timeout time.Duration, in io.ReadCloser, out io.Writer) TelnetClient {
-	instance := Cli{address: address, timeout: timeout, in: in, out: out, session: nil}
+	instance := Cli{
+		address:   address,
+		timeout:   timeout,
+		in:        in,
+		out:       out,
+		session:   nil,
+		inBuffer:  make([]byte, 4096),
+		outBuffer: make([]byte, 4096),
+	}
 	return &instance
 }
 
@@ -37,16 +46,12 @@ func (cli *Cli) Connect() error {
 }
 
 func (cli *Cli) Send() error {
-	var n int
-	data, err := io.ReadAll(cli.in)
+	outBuffer, err := io.ReadAll(cli.in)
 	if err != nil {
 		return err
 	}
-	if n, err = cli.session.Write(data); err != nil {
+	if _, err := cli.session.Write(outBuffer); err != nil {
 		return err
-	}
-	if n > 0 {
-		fmt.Println(data)
 	}
 	return nil
 }
@@ -54,21 +59,16 @@ func (cli *Cli) Send() error {
 func (cli *Cli) Receive() error {
 	var err error
 	var n int
-	inBuffer := make([]byte, 0, 4096)
-	tmp := make([]byte, 256)
-	for err != io.EOF {
-		n, err = cli.session.Read(tmp)
-		if err != nil && err != io.EOF {
-			return err
-		}
-		inBuffer = append(inBuffer, tmp[:n]...)
-	}
-	n, err = cli.out.Write(inBuffer)
+	n, err = cli.session.Read(cli.inBuffer)
 	if err != nil {
+		/*if err == io.EOF {
+			cli.out.Write([]byte("*** EOF received ***\n"))
+		}*/
 		return err
 	}
-	if n > 0 {
-		fmt.Println(inBuffer)
+	_, err = cli.out.Write(cli.inBuffer[:n])
+	if err != nil {
+		return err
 	}
 	return nil
 }

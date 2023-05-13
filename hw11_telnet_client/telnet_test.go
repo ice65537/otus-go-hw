@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"sync"
@@ -50,19 +51,23 @@ func TestTelnetClient(t *testing.T) {
 		go func() {
 			defer wg.Done()
 
+			fmt.Println("---Connection awaiting---")
 			conn, err := l.Accept()
+			fmt.Println("---Connection accepted---")
 			require.NoError(t, err)
 			require.NotNil(t, conn)
 			defer func() { require.NoError(t, conn.Close()) }()
 
 			request := make([]byte, 1024)
 			n, err := conn.Read(request)
+			fmt.Printf("---Incoming request---[%s]\r\n", request)
 			require.NoError(t, err)
 			require.Equal(t, "hello\n", string(request)[:n])
 
 			n, err = conn.Write([]byte("world\n"))
 			require.NoError(t, err)
 			require.NotEqual(t, 0, n)
+			fmt.Printf("---Sended answer---[world\n]\r\n")
 		}()
 
 		wg.Wait()

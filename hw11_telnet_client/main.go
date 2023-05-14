@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync"
 	"time"
 )
 
@@ -18,7 +19,7 @@ const keyCancel ctxKey = "Cancel"
 func main() {
 	flagTimeout := flag.String("timeout", "10s", "timeout for server connect")
 	flagHelp := flag.Bool("help", false, "view help message")
-	flagHello := flag.String("hello", "WHATSUP", "hello message for server")
+	flagHello := flag.String("hello", "WHAT'S UP?", "hello message for server")
 	flag.Parse()
 	if *flagHelp {
 		s := `
@@ -31,42 +32,73 @@ func main() {
 	}
 	timeout, err := time.ParseDuration(*flagTimeout)
 	if err != nil {
-		panic(fmt.Errorf("invalid timeout value [%s]", *flagTimeout))
+		fmt.Fprintf(os.Stderr, "Invalid timeout value [%s]\n", *flagTimeout)
+		return
 	}
 	host := flag.Args()[0]
 	port := flag.Args()[1]
 	scanBuffer := &bytes.Buffer{}
-	in := io.NopCloser(scanBuffer)
-	client := NewTelnetClient(host+":"+port, timeout, in, os.Stdout)
+	scanBuffer.Grow(4096)
+	client := NewTelnetClient(host+":"+port, timeout, io.NopCloser(scanBuffer), os.Stdout)
 	err = client.Connect()
 	defer client.Close()
 	if err != nil {
-		panic(err)
+		fmt.Fprintf(os.Stderr, "Connection error [%s]\n", err)
+		return
 	}
-	fmt.Fprintf(os.Stderr, "Telnet client successfully connected to %s:%s\r\n", host, port)
-	fmt.Fprintf(scanBuffer, *flagHello)
+	fmt.Fprintf(os.Stderr, "Telnet client successfully connected to %s:%s\n", host, port)
+	fmt.Fprint(scanBuffer, *flagHello+"\n")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	ctx = context.WithValue(ctx, keyCancel, cancel)
 
-	go receiver(ctx, client)
-	go sender(ctx, client)
+	var wg sync.WaitGroup
+
 	go scanner(ctx, scanBuffer)
-	<-ctx.Done()
+	wg.Add(2)
+	go receiver(ctx, client, &wg)
+	go sender(ctx, client, &wg)
+	wg.Wait()
+	os.Exit(0)
 }
 
 func scanner(ctx context.Context, w io.Writer) {
+	var inputBytes []byte
+	var scanner *bufio.Scanner
+
 	defer ctx.Value(keyCancel).(context.CancelFunc)()
-	scanner := bufio.NewScanner(os.Stdin)
-	for {
-		fmt.Print("[Send]>")
-		if !scanner.Scan() {
-			break
+
+	stdinStat, err := os.Stdin.Stat()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Stdin get stat error: %s\n", err)
+		return
+	}
+	if stdinStat.Mode()&os.ModeNamedPipe != 0 {
+		fmt.Fprint(os.Stderr, "os.Stdin is in pipe mode\n")
+		n, err := io.Copy(w, os.Stdin)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Stdin pipe copy error: %s\n", err)
 		}
-		if _, err := w.Write(scanner.Bytes()); err != nil {
-			fmt.Fprintf(os.Stderr, "Scan-write error: %s", err)
+		fmt.Fprintf(os.Stderr, "Stdin pipe copied %d bytes\n", n)
+		return
+	}
+
+	scanner = bufio.NewScanner(os.Stdin)
+	for {
+		scanner.Scan()
+		err = scanner.Err()
+		inputBytes = append(scanner.Bytes(), '\n')
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Scan error: %s\n", err)
 			return
+		}
+		if len(inputBytes) > 0 {
+			_, err = w.Write(inputBytes)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Scan-write error: %s\n", err)
+				return
+			}
 		}
 		select {
 		case <-ctx.Done():
@@ -77,37 +109,41 @@ func scanner(ctx context.Context, w io.Writer) {
 	}
 }
 
-func receiver(ctx context.Context, cli TelnetClient) {
+func receiver(ctx context.Context, cli TelnetClient, wg *sync.WaitGroup) {
+	fmt.Fprint(os.Stderr, "Receiver started\n")
+	defer wg.Done()
 	defer ctx.Value(keyCancel).(context.CancelFunc)()
-	ticker := time.NewTicker(100 * time.Millisecond)
-	defer ticker.Stop()
 	for {
+		err := cli.Receive()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Receive error: %s\n", err)
+			return
+		}
 		select {
-		case <-ticker.C:
-			err := cli.Receive()
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Receive error: %s", err)
-				return
-			}
+		default:
+			continue
 		case <-ctx.Done():
+			fmt.Fprint(os.Stderr, "Receiver stopped\n")
 			return
 		}
 	}
 }
 
-func sender(ctx context.Context, cli TelnetClient) {
+func sender(ctx context.Context, cli TelnetClient, wg *sync.WaitGroup) {
+	fmt.Fprint(os.Stderr, "Sender started\n")
+	defer wg.Done()
 	defer ctx.Value(keyCancel).(context.CancelFunc)()
-	ticker := time.NewTicker(100 * time.Millisecond)
-	defer ticker.Stop()
 	for {
+		err := cli.Send()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Send error: %s\n", err)
+			return
+		}
 		select {
-		case <-ticker.C:
-			err := cli.Send()
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Send error: %s", err)
-				return
-			}
+		default:
+			continue
 		case <-ctx.Done():
+			fmt.Fprint(os.Stderr, "Sender stopped\n")
 			return
 		}
 	}

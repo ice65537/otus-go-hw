@@ -14,24 +14,22 @@ type TelnetClient interface {
 }
 
 type Cli struct {
-	address   string
-	timeout   time.Duration
-	in        io.ReadCloser
-	out       io.Writer
-	session   net.Conn
-	inBuffer  []byte
-	outBuffer []byte
+	address  string
+	timeout  time.Duration
+	in       io.ReadCloser
+	out      io.Writer
+	session  net.Conn
+	inBuffer []byte
 }
 
 func NewTelnetClient(address string, timeout time.Duration, in io.ReadCloser, out io.Writer) TelnetClient {
 	instance := Cli{
-		address:   address,
-		timeout:   timeout,
-		in:        in,
-		out:       out,
-		session:   nil,
-		inBuffer:  make([]byte, 4096),
-		outBuffer: make([]byte, 4096),
+		address:  address,
+		timeout:  timeout,
+		in:       in,
+		out:      out,
+		session:  nil,
+		inBuffer: make([]byte, 4096),
 	}
 	return &instance
 }
@@ -61,9 +59,6 @@ func (cli *Cli) Receive() error {
 	var n int
 	n, err = cli.session.Read(cli.inBuffer)
 	if err != nil {
-		/*if err == io.EOF {
-			cli.out.Write([]byte("*** EOF received ***\n"))
-		}*/
 		return err
 	}
 	_, err = cli.out.Write(cli.inBuffer[:n])

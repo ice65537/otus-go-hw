@@ -35,8 +35,12 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Invalid timeout value [%s]\n", *flagTimeout)
 		return
 	}
-	host := flag.Args()[0]
-	port := flag.Args()[1]
+	host := ""
+	port := ""
+	if len(flag.Args()) >= 2 {
+		host = flag.Args()[0]
+		port = flag.Args()[1]
+	}
 	scanBuffer := &bytes.Buffer{}
 	scanBuffer.Grow(4096)
 	client := NewTelnetClient(host+":"+port, timeout, io.NopCloser(scanBuffer), os.Stdout)
@@ -57,18 +61,18 @@ func main() {
 
 	var wg sync.WaitGroup
 
-	go scanner(ctx, scanBuffer)
-	wg.Add(2)
+	wg.Add(3)
+	go scanner(ctx, scanBuffer, &wg)
 	go receiver(ctx, client, &wg)
 	go sender(ctx, client, &wg)
 	wg.Wait()
-	os.Exit(0) //nolint: gocritic
 }
 
-func scanner(ctx context.Context, w io.Writer) {
+func scanner(ctx context.Context, w io.Writer, wg *sync.WaitGroup) {
 	var inputBytes []byte
 	var scanner *bufio.Scanner
 
+	defer wg.Done()
 	defer ctx.Value(keyCancel).(context.CancelFunc)()
 
 	stdinStat, err := os.Stdin.Stat()
@@ -87,8 +91,7 @@ func scanner(ctx context.Context, w io.Writer) {
 	}
 
 	scanner = bufio.NewScanner(os.Stdin)
-	for {
-		scanner.Scan()
+	for scanner.Scan() {
 		err = scanner.Err()
 		inputBytes = append(scanner.Bytes(), '\n')
 		if err != nil {

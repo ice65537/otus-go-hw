@@ -74,6 +74,9 @@ func (cli *Cli) Receive() error {
 }
 
 func (cli *Cli) Close() error {
+	if cli.session == nil {
+		return nil
+	}
 	if err := cli.session.Close(); err != nil {
 		return err
 	}

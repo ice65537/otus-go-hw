@@ -19,7 +19,7 @@ const keyCancel ctxKey = "Cancel"
 func main() {
 	flagTimeout := flag.String("timeout", "10s", "timeout for server connect")
 	flagHelp := flag.Bool("help", false, "view help message")
-	flagHello := flag.String("hello", "WHAT'S UP?", "hello message for server")
+	flagHello := flag.String("hello", "", "hello message for server")
 	flag.Parse()
 	if *flagHelp {
 		s := `
@@ -47,7 +47,9 @@ func main() {
 		return
 	}
 	fmt.Fprintf(os.Stderr, "Telnet client successfully connected to %s:%s\n", host, port)
-	fmt.Fprint(scanBuffer, *flagHello+"\n")
+	if *flagHello != "" {
+		fmt.Fprint(scanBuffer, *flagHello+"\n")
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

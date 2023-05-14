@@ -62,8 +62,7 @@ func main() {
 	go receiver(ctx, client, &wg)
 	go sender(ctx, client, &wg)
 	wg.Wait()
-	cancel() // for linter :)
-	os.Exit(0)
+	os.Exit(0) //nolint: gocritic
 }
 
 func scanner(ctx context.Context, w io.Writer) {

@@ -119,15 +119,16 @@ func receiver(ctx context.Context, cli TelnetClient, wg *sync.WaitGroup,
 	defer wg.Done()
 	defer parentCancel()
 	for {
+		if err := cli.Receive(); err != nil {
+			fmt.Fprintf(os.Stderr, "Receive error: %s\n", err)
+			return
+		}
 		select {
 		case <-ctx.Done():
 			fmt.Fprint(os.Stderr, "Receiver stopped\n")
 			return
 		default:
-			if err := cli.Receive(); err != nil {
-				fmt.Fprintf(os.Stderr, "Receive error: %s\n", err)
-				return
-			}
+			continue
 		}
 	}
 }
@@ -139,16 +140,17 @@ func sender(ctx context.Context, cli TelnetClient, wg *sync.WaitGroup,
 	defer wg.Done()
 	defer parentCancel()
 	for {
+		err := cli.Send()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Send error: %s\n", err)
+			return
+		}
 		select {
 		case <-ctx.Done():
 			fmt.Fprint(os.Stderr, "Sender stopped\n")
 			return
 		default:
-			err := cli.Send()
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Send error: %s\n", err)
-				return
-			}
+			continue
 		}
 	}
 }

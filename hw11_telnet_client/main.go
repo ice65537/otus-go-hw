@@ -55,7 +55,6 @@ func main() {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-
 	defer cancel()
 
 	var wg sync.WaitGroup

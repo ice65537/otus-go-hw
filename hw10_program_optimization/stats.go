@@ -1,67 +1,106 @@
 package hw10programoptimization
 
 import (
-	"encoding/json"
+	"bufio"
+	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"regexp"
-	"strings"
+
+	qjson "github.com/buger/jsonparser"
+	jsoniter "github.com/json-iterator/go"
 )
 
 type User struct {
-	ID       int
-	Name     string
-	Username string
-	Email    string
-	Phone    string
-	Password string
-	Address  string
+	// ID       int
+	// Name     string
+	// Username string
+	Email string
+	// Phone    string
+	// Password string
+	// Address  string
 }
 
 type DomainStat map[string]int
 
-func GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
-	u, err := getUsers(r)
-	if err != nil {
-		return nil, fmt.Errorf("get users error: %w", err)
-	}
-	return countDomains(u, domain)
-}
+var UseJSONBugerVsIter = true
 
-type users [100_000]User
-
-func getUsers(r io.Reader) (result users, err error) {
-	content, err := ioutil.ReadAll(r)
-	if err != nil {
-		return
-	}
-
-	lines := strings.Split(string(content), "\n")
-	for i, line := range lines {
-		var user User
-		if err = json.Unmarshal([]byte(line), &user); err != nil {
-			return
-		}
-		result[i] = user
-	}
+func GetDomainStat(r io.Reader, domain string) (result DomainStat, err error) {
+	result = make(DomainStat)
+	err = parseRecords(r, &result, domain)
 	return
 }
 
-func countDomains(u users, domain string) (DomainStat, error) {
-	result := make(DomainStat)
+func parseRecords(r io.Reader, domainStat *DomainStat, lvl1 string) error {
+	var uline []byte
+	var user User
+	var err error
 
-	for _, user := range u {
-		matched, err := regexp.Match("\\."+domain, []byte(user.Email))
+	br := bufio.NewReaderSize(r, 1024)
+	for err == nil {
+		uline, err = br.ReadSlice('}')
 		if err != nil {
-			return nil, err
+			break
 		}
-
-		if matched {
-			num := result[strings.ToLower(strings.SplitN(user.Email, "@", 2)[1])]
-			num++
-			result[strings.ToLower(strings.SplitN(user.Email, "@", 2)[1])] = num
+		if UseJSONBugerVsIter {
+			user.Email, err = qjson.GetString(uline, "Email")
+			if err != nil {
+				break
+			}
+		} else {
+			user.Email = ""
+			user.Email = jsoniter.Get(uline, "Email").ToString()
+			if user.Email == "" {
+				err = fmt.Errorf("email not found in %s", uline)
+				break
+			}
+		}
+		err = checkDomain(lvl1, user.Email, domainStat)
+		if err != nil {
+			break
 		}
 	}
-	return result, nil
+	if errors.Is(err, io.EOF) {
+		err = nil
+	}
+	return err
+}
+
+func parseLowerEmail(email string) (lvl1, domain, lower string) {
+	var dog, dot int
+	lowerB := make([]byte, len(email))
+	for i, v := range email {
+		if v == '@' {
+			dog = i
+		}
+		if v == '.' {
+			dot = i
+		}
+		if v >= 'A' && v <= 'Z' {
+			v += 'a' - 'A'
+		}
+		lowerB[i] = byte(v)
+	}
+	if dog == 0 || dot == 0 || dog > dot {
+		return
+	}
+	lower = string(lowerB[:len(email)])
+	lvl1 = lower[dot+1:]
+	domain = lower[dog+1:]
+	return
+}
+
+func checkDomain(lvl1, email string, domainStat *DomainStat) error {
+	plvl1, pdomain, _ := parseLowerEmail(email)
+	if plvl1 == "" {
+		return fmt.Errorf("bad email %s", email)
+	}
+	val, ok := (*domainStat)[pdomain]
+	if ok {
+		(*domainStat)[pdomain] = val + 1
+		return nil
+	}
+	if lvl1 == plvl1 {
+		(*domainStat)[pdomain] = 1
+	}
+	return nil
 }

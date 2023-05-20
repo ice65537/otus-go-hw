@@ -55,9 +55,7 @@ func (cli *Cli) Send() error {
 }
 
 func (cli *Cli) Receive() error {
-	var err error
-	var n int
-	n, err = cli.session.Read(cli.inBuffer)
+	n, err := cli.session.Read(cli.inBuffer)
 	if err != nil {
 		return err
 	}

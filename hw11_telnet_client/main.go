@@ -12,10 +12,6 @@ import (
 	"time"
 )
 
-type ctxKey string
-
-const keyCancel ctxKey = "Cancel"
-
 func main() {
 	flagTimeout := flag.String("timeout", "10s", "timeout for server connect")
 	flagHelp := flag.Bool("help", false, "view help message")
@@ -37,19 +33,22 @@ func main() {
 	}
 	host := ""
 	port := ""
-	if len(flag.Args()) >= 2 {
+	if len(flag.Args()) == 2 {
 		host = flag.Args()[0]
 		port = flag.Args()[1]
+	} else {
+		fmt.Fprintf(os.Stderr, "Invalid arg count [%d], expected 2 \n", len(flag.Args()))
+		return
 	}
 	scanBuffer := &bytes.Buffer{}
 	scanBuffer.Grow(4096)
 	client := NewTelnetClient(host+":"+port, timeout, io.NopCloser(scanBuffer), os.Stdout)
 	err = client.Connect()
-	defer client.Close()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Connection error [%s]\n", err)
 		return
 	}
+	defer client.Close()
 	fmt.Fprintf(os.Stderr, "Telnet client successfully connected to %s:%s\n", host, port)
 	if *flagHello != "" {
 		fmt.Fprint(scanBuffer, *flagHello+"\n")
@@ -57,23 +56,24 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	ctx = context.WithValue(ctx, keyCancel, cancel)
 
 	var wg sync.WaitGroup
 
 	wg.Add(3)
-	go scanner(ctx, scanBuffer, &wg)
-	go receiver(ctx, client, &wg)
-	go sender(ctx, client, &wg)
+	go scanner(ctx, scanBuffer, &wg, cancel)
+	go receiver(ctx, client, &wg, cancel)
+	go sender(ctx, client, &wg, cancel)
 	wg.Wait()
 }
 
-func scanner(ctx context.Context, w io.Writer, wg *sync.WaitGroup) {
+func scanner(ctx context.Context, w io.Writer, wg *sync.WaitGroup,
+	parentCancel context.CancelFunc,
+) {
 	var inputBytes []byte
 	var scanner *bufio.Scanner
 
 	defer wg.Done()
-	defer ctx.Value(keyCancel).(context.CancelFunc)()
+	defer parentCancel()
 
 	stdinStat, err := os.Stdin.Stat()
 	if err != nil {
@@ -92,64 +92,63 @@ func scanner(ctx context.Context, w io.Writer, wg *sync.WaitGroup) {
 
 	scanner = bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
-		err = scanner.Err()
-		inputBytes = append(scanner.Bytes(), '\n')
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Scan error: %s\n", err)
-			return
-		}
-		if len(inputBytes) > 0 {
-			_, err = w.Write(inputBytes)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Scan-write error: %s\n", err)
-				return
-			}
-		}
 		select {
 		case <-ctx.Done():
 			return
 		default:
-			continue
+			err = scanner.Err()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Scan error: %s\n", err)
+				return
+			}
+			inputBytes = append(scanner.Bytes(), '\n')
+			if len(inputBytes) > 0 {
+				if _, err = w.Write(inputBytes); err != nil {
+					fmt.Fprintf(os.Stderr, "Scan-write error: %s\n", err)
+					return
+				}
+			}
 		}
 	}
 }
 
-func receiver(ctx context.Context, cli TelnetClient, wg *sync.WaitGroup) {
+func receiver(ctx context.Context, cli TelnetClient, wg *sync.WaitGroup,
+	parentCancel context.CancelFunc,
+) {
 	fmt.Fprint(os.Stderr, "Receiver started\n")
 	defer wg.Done()
-	defer ctx.Value(keyCancel).(context.CancelFunc)()
+	defer parentCancel()
 	for {
-		err := cli.Receive()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Receive error: %s\n", err)
-			return
-		}
 		select {
-		default:
-			continue
 		case <-ctx.Done():
 			fmt.Fprint(os.Stderr, "Receiver stopped\n")
 			return
+		default:
+			if err := cli.Receive(); err != nil {
+				fmt.Fprintf(os.Stderr, "Receive error: %s\n", err)
+				return
+			}
 		}
 	}
 }
 
-func sender(ctx context.Context, cli TelnetClient, wg *sync.WaitGroup) {
+func sender(ctx context.Context, cli TelnetClient, wg *sync.WaitGroup,
+	parentCancel context.CancelFunc,
+) {
 	fmt.Fprint(os.Stderr, "Sender started\n")
 	defer wg.Done()
-	defer ctx.Value(keyCancel).(context.CancelFunc)()
+	defer parentCancel()
 	for {
-		err := cli.Send()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Send error: %s\n", err)
-			return
-		}
 		select {
-		default:
-			continue
 		case <-ctx.Done():
 			fmt.Fprint(os.Stderr, "Sender stopped\n")
 			return
+		default:
+			err := cli.Send()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Send error: %s\n", err)
+				return
+			}
 		}
 	}
 }

@@ -1,10 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"net"
-	"os"
 	"time"
 )
 
@@ -49,11 +47,13 @@ func (cli *Cli) Send() error {
 	outBuffer, err := io.ReadAll(cli.in)
 	if err != nil {
 		return err
+	} else if len(outBuffer) == 0 {
+		return nil
 	}
 	if _, err := cli.session.Write(outBuffer); err != nil {
 		return err
 	}
-	fmt.Fprintf(os.Stderr, "Send(%s)\n", outBuffer)
+	// fmt.Fprintf(os.Stderr, "Sended(%s)\n", outBuffer)
 	return nil
 }
 
@@ -61,12 +61,14 @@ func (cli *Cli) Receive() error {
 	n, err := cli.session.Read(cli.inBuffer)
 	if err != nil {
 		return err
+	} else if n == 0 {
+		return nil
 	}
 	_, err = cli.out.Write(cli.inBuffer[:n])
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(os.Stderr, "Receive(%s)\n", cli.inBuffer[:n])
+	// fmt.Fprintf(os.Stderr, "Received(%s)\n", cli.inBuffer[:n])
 	return nil
 }
 

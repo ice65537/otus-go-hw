@@ -31,20 +31,17 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Invalid timeout value [%s]\n", *flagTimeout)
 		return
 	}
-	host := ""
-	port := ""
-	if len(flag.Args()) == 2 {
-		host = flag.Args()[0]
-		port = flag.Args()[1]
-	} else {
+	if len(flag.Args()) != 2 {
 		fmt.Fprintf(os.Stderr, "Invalid arg count [%d], expected 2 \n", len(flag.Args()))
 		return
 	}
+	host := flag.Args()[0]
+	port := flag.Args()[1]
+
 	scanBuffer := &bytes.Buffer{}
 	scanBuffer.Grow(4096)
 	client := NewTelnetClient(host+":"+port, timeout, io.NopCloser(scanBuffer), os.Stdout)
-	err = client.Connect()
-	if err != nil {
+	if err = client.Connect(); err != nil {
 		fmt.Fprintf(os.Stderr, "Connection error [%s]\n", err)
 		return
 	}
@@ -96,17 +93,14 @@ func scanner(ctx context.Context, w io.Writer, wg *sync.WaitGroup,
 		case <-ctx.Done():
 			return
 		default:
-			err = scanner.Err()
-			if err != nil {
+			if err = scanner.Err(); err != nil {
 				fmt.Fprintf(os.Stderr, "Scan error: %s\n", err)
 				return
 			}
 			inputBytes = append(scanner.Bytes(), '\n')
-			if len(inputBytes) > 0 {
-				if _, err = w.Write(inputBytes); err != nil {
-					fmt.Fprintf(os.Stderr, "Scan-write error: %s\n", err)
-					return
-				}
+			if _, err = w.Write(inputBytes); err != nil {
+				fmt.Fprintf(os.Stderr, "Scan-write error: %s\n", err)
+				return
 			}
 		}
 	}
@@ -140,8 +134,7 @@ func sender(ctx context.Context, cli TelnetClient, wg *sync.WaitGroup,
 	defer wg.Done()
 	defer parentCancel()
 	for {
-		err := cli.Send()
-		if err != nil {
+		if err := cli.Send(); err != nil {
 			fmt.Fprintf(os.Stderr, "Send error: %s\n", err)
 			return
 		}

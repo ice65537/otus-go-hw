@@ -2,6 +2,7 @@ package main
 
 import (
 	"io"
+	"net"
 	"time"
 )
 
@@ -12,10 +13,71 @@ type TelnetClient interface {
 	Receive() error
 }
 
+type Cli struct {
+	address  string
+	timeout  time.Duration
+	in       io.ReadCloser
+	out      io.Writer
+	session  net.Conn
+	inBuffer []byte
+}
+
 func NewTelnetClient(address string, timeout time.Duration, in io.ReadCloser, out io.Writer) TelnetClient {
-	// Place your code here.
+	instance := Cli{
+		address:  address,
+		timeout:  timeout,
+		in:       in,
+		out:      out,
+		session:  nil,
+		inBuffer: make([]byte, 4096),
+	}
+	return &instance
+}
+
+func (cli *Cli) Connect() error {
+	var err error
+	cli.session, err = net.DialTimeout("tcp", cli.address, cli.timeout)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
-// Place your code here.
-// P.S. Author's solution takes no more than 50 lines.
+func (cli *Cli) Send() error {
+	outBuffer, err := io.ReadAll(cli.in)
+	if err != nil {
+		return err
+	} else if len(outBuffer) == 0 {
+		return nil
+	}
+	if _, err := cli.session.Write(outBuffer); err != nil {
+		return err
+	}
+	// fmt.Fprintf(os.Stderr, "Sended(%s)\n", outBuffer)
+	return nil
+}
+
+func (cli *Cli) Receive() error {
+	n, err := cli.session.Read(cli.inBuffer)
+	if err != nil {
+		return err
+	} else if n == 0 {
+		return nil
+	}
+	_, err = cli.out.Write(cli.inBuffer[:n])
+	if err != nil {
+		return err
+	}
+	// fmt.Fprintf(os.Stderr, "Received(%s)\n", cli.inBuffer[:n])
+	return nil
+}
+
+func (cli *Cli) Close() error {
+	if cli.session == nil {
+		return nil
+	}
+	if err := cli.session.Close(); err != nil {
+		return err
+	}
+	return nil
+}

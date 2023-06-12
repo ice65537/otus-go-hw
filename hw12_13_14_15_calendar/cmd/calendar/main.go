@@ -44,6 +44,7 @@ func main() {
 	}
 
 	app := app.New("Calendar.Listener", config.Logger.Level, config.Logger.Depth, storage)
+	log := app.Logger()
 
 	server := internalhttp.NewServer(app)
 
@@ -58,15 +59,16 @@ func main() {
 		defer cancel()
 
 		if err := server.Stop(ctx); err != nil {
-			app.Log.Error(opStop, "failed to stop http server: "+err.Error())
+			log.Error(opStop, "failed to stop http server: "+err.Error())
+		} else {
+			log.Info(opStop, "Server has been stopped")
 		}
-		app.Log.Info(opStop, "Server has been stopped")
 	}()
 
 	if err := server.Start(ctx); err != nil {
-		app.Log.Error(opStart, "failed to start http server: "+err.Error())
+		log.Error(opStart, "failed to start http server: "+err.Error())
 		cancel()
 		os.Exit(1) //nolint:gocritic
 	}
-	app.Log.Info(opStart, "Server is running...")
+	log.Info(opStart, "Server is running...")
 }

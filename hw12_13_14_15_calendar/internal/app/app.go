@@ -9,7 +9,7 @@ import (
 )
 
 type App struct {
-	Log   *logger.Logger
+	log   *logger.Logger
 	store Storage
 }
 
@@ -23,14 +23,11 @@ type Storage interface {
 
 func New(appName, logLevel string, logDepth int, store Storage) *App {
 	app := App{}
-	app.Log = logger.New(appName, logLevel, logDepth)
+	app.log = logger.New(appName, logLevel, logDepth)
 	app.store = store
 	return &app
 }
 
-/*func (a *App) CreateEvent(ctx context.Context, id, title string) error {
-	// TODO
-	return nil
-	// return a.storage.CreateEvent(storage.Event{ID: id, Title: title})
-}*/
-// TODO
+func (a App) Logger() *logger.Logger {
+	return a.log
+}

@@ -2,23 +2,26 @@ package internalhttp
 
 import (
 	"context"
+	"net/http"
+
+	"github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/logger"
 )
 
-type Server struct { // TODO
+type Server struct {
+	log *logger.Logger
 }
 
-type Logger interface { // TODO
-}
-
-type Application interface { // TODO
+type Application interface {
+	Logger() *logger.Logger
 }
 
 func NewServer(app Application) *Server {
-	return &Server{}
+	return &Server{log: app.Logger()}
 }
 
 func (s *Server) Start(ctx context.Context) error {
-	// TODO
+	http.HandleFunc("/",)
+
 	<-ctx.Done()
 	return nil
 }

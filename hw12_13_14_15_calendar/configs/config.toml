@@ -4,3 +4,7 @@ depth = "5"
 
 [storage]
 type = "memory"
+
+[http-server]
+host = "localhost"
+port = 1234

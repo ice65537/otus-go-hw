@@ -2,6 +2,7 @@ package logger
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -54,8 +55,9 @@ func (l Logger) output(oper, txt, level string, depth int) {
 	fmt.Println(l.encode(oper, txt, level, depth))
 }
 
-func (l Logger) Error(oper, msg string) {
+func (l Logger) Error(oper, msg string) error {
 	l.output(oper, msg, "ERROR", 0)
+	return fmt.Errorf(strings.ToLower(oper) + ": " + msg)
 }
 
 func (l Logger) Warning(oper, msg string) {

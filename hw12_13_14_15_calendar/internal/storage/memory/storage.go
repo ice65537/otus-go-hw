@@ -7,7 +7,7 @@ type Storage struct {
 	mu sync.RWMutex
 }
 
-func New() *Storage {
+func New(stgType string) *Storage {
 	return &Storage{}
 }
 

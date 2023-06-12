@@ -1,9 +1,6 @@
 [logger]
-level = "INFO"
-depth = "0"
+level = "DEBUG"
+depth = "5"
 
 [storage]
 type = "memory"
-
-# TODO
-# ...

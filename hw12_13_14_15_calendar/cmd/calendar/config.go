@@ -2,34 +2,51 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/spf13/viper"
 )
 
-// При желании конфигурацию можно вынести в internal/config.
-// Организация конфига в main принуждает нас сужать API компонентов, использовать
-// при их конструировании только необходимые параметры, а также уменьшает вероятность циклической зависимости.
 type Config struct {
-	Logger LoggerConf
-	// TODO
+	Logger  LoggerConf
+	Storage StorageConf
 }
 
 type LoggerConf struct {
 	Level string
-	// TODO
+	Depth int
 }
 
-func NewConfig() Config {
-	viper.SetConfigName(configFile)
+type StorageConf struct {
+	Type string
+}
+
+func GetConfig() Config {
+	cfgFileParsed := strings.Split(configFile, "/") // configFile - main.go: global variable
+	cfgName := cfgFileParsed[len(cfgFileParsed)-1]
+	cfgPath := string(configFile[:len(configFile)-len(cfgName)])
+	viper.SetConfigName(cfgName)
 	viper.SetConfigType("toml")
-	viper.AddConfigPath("../configs/config.toml")
+	viper.AddConfigPath(cfgPath)
+	viper.AddConfigPath(".")
+	viper.AddConfigPath("../../configs")
 	if err := viper.ReadInConfig(); err != nil {
 		panic(fmt.Errorf("config reading fatal error: %w", err))
 	}
-	cfgParsed := viper.AllSettings()
-	fmt.Println(cfgParsed)
-	cfg := Config{}
+	// DEFAULTS
+	viper.SetDefault("logger.level", "ERROR")
+	viper.SetDefault("logger.depth", 0)
+	viper.SetDefault("storage.type", "memory")
+	//
+	cfg := Config{
+		LoggerConf{
+			Level: viper.GetString("logger.level"),
+			Depth: viper.GetInt("logger.depth"),
+		},
+		StorageConf{
+			Type: viper.GetString("storage.type"),
+		},
+	}
+	fmt.Println(cfg)
 	return cfg
 }
-
-// TODO

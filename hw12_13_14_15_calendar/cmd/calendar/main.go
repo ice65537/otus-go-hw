@@ -28,13 +28,12 @@ func main() {
 		return
 	}
 
-	config := NewConfig()
-	logg := logger.New(config.Logger.Level)
+	config := GetConfig()
 
-	storage := memorystorage.New()
-	calendar := app.New(logg, storage)
+	storage := memorystorage.New(config.Storage.Type)
+	calendar := app.New(config.Logger.Level, config.Logger.Depth, storage)
 
-	server := internalhttp.NewServer(logg, calendar)
+	server := internalhttp.NewServer(calendar)
 
 	ctx, cancel := signal.NotifyContext(context.Background(),
 		syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)

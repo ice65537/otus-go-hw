@@ -1,5 +1,9 @@
 [logger]
 level = "INFO"
+depth = "0"
+
+[storage]
+type = "memory"
 
 # TODO
 # ...

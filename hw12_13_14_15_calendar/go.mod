@@ -2,7 +2,10 @@ module github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar
 
 go 1.19
 
-require github.com/spf13/viper v1.16.0
+require (
+	github.com/google/uuid v1.1.2
+	github.com/spf13/viper v1.16.0
+)
 
 require (
 	github.com/fsnotify/fsnotify v1.6.0 // indirect

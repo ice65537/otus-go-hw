@@ -3,15 +3,15 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/app"
-	"github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/logger"
 	internalhttp "github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/server/http"
-	memorystorage "github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/storage/memory"
+	memstore "github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/storage/memory"
 )
 
 var configFile string
@@ -21,6 +21,12 @@ func init() {
 }
 
 func main() {
+	const (
+		opStart = "Server.Start"
+		opStop  = "Server.Stop"
+	)
+	var storage app.Storage // err     error
+
 	flag.Parse()
 
 	if flag.Arg(0) == "version" {
@@ -30,10 +36,16 @@ func main() {
 
 	config := GetConfig()
 
-	storage := memorystorage.New(config.Storage.Type)
-	calendar := app.New(config.Logger.Level, config.Logger.Depth, storage)
+	switch config.Storage.Type {
+	case "memory":
+		storage = memstore.New()
+	default:
+		panic(fmt.Errorf("storage type [%s] unknown", config.Storage.Type))
+	}
 
-	server := internalhttp.NewServer(calendar)
+	app := app.New("Calendar.Listener", config.Logger.Level, config.Logger.Depth, storage)
+
+	server := internalhttp.NewServer(app)
 
 	ctx, cancel := signal.NotifyContext(context.Background(),
 		syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
@@ -46,15 +58,15 @@ func main() {
 		defer cancel()
 
 		if err := server.Stop(ctx); err != nil {
-			logg.Error("failed to stop http server: " + err.Error())
+			app.Log.Error(opStop, "failed to stop http server: "+err.Error())
 		}
+		app.Log.Info(opStop, "Server has been stopped")
 	}()
 
-	logg.Info("calendar is running...")
-
 	if err := server.Start(ctx); err != nil {
-		logg.Error("failed to start http server: " + err.Error())
+		app.Log.Error(opStart, "failed to start http server: "+err.Error())
 		cancel()
 		os.Exit(1) //nolint:gocritic
 	}
+	app.Log.Info(opStart, "Server is running...")
 }

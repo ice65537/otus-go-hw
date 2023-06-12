@@ -1,4 +1,4 @@
-package sqlstorage
+package dbstore
 
 import "context"
 
@@ -9,7 +9,7 @@ func New() *Storage {
 	return &Storage{}
 }
 
-func (s *Storage) Connect(ctx context.Context) error {
+func (s *Storage) Init(ctx context.Context) error {
 	// TODO
 	return nil
 }

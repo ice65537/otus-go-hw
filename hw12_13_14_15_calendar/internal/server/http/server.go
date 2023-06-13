@@ -15,16 +15,14 @@ type Server struct {
 	srv *http.Server
 }
 
-type SrvHandler struct {
-	log *logger.Logger
-}
+type SrvHandler struct{}
 
 type Application interface {
 	Logger() *logger.Logger
 }
 
 func NewServer(app Application, host string, port, timeout int) *Server {
-	sh := SrvHandler{log: app.Logger()}
+	sh := SrvHandler{}
 	srv := http.Server{
 		Addr:         fmt.Sprintf(host+":%d", port),
 		Handler:      midWare(app.Logger(), &sh),
@@ -39,7 +37,7 @@ func (s *Server) Start(ctx context.Context) error {
 		<-ctx.Done()
 		s.Stop(ctx)
 	}()
-	s.log.Info("Server.Starting", "Starting at address^ "+s.srv.Addr)
+	s.log.Info("Server.Starting", "Starting at address "+s.srv.Addr)
 	if err := s.srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return s.log.Error("Server.Listen", fmt.Sprintf("%v", err))
 	}
@@ -54,6 +52,7 @@ func (s *Server) Stop(ctx context.Context) error {
 }
 
 func (sh *SrvHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Hello!"))
-	sh.log.Debug("Hello", "completed", 5)
+	user := "Anonimus"
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(fmt.Sprintf("Hello %s!", user)))
 }

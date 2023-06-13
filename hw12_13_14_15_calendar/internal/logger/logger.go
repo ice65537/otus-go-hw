@@ -39,15 +39,15 @@ func New(appname string, level string, depth int) *Logger {
 
 type Message struct {
 	Timestamp time.Time `json:"timestamp"`
+	Text      string    `json:"text"`
 	AppName   string    `json:"appname"`
 	Level     string    `json:"level"`
 	Depth     int       `json:"depth"`
 	Oper      string    `json:"oper"`
-	Text      string    `json:"text"`
 }
 
 func (l Logger) encode(oper, txt, level string, depth int) string {
-	msg := Message{time.Now(), l.AppName, level, depth, oper, txt}
+	msg := Message{time.Now(), txt, l.AppName, level, depth, oper}
 	rslt, err := json.Marshal(msg)
 	if err != nil {
 		return fmt.Sprintf(`{"level"="ERROR","depth"="0","oper"="Logger.Encode","text"="%v"}`, err)

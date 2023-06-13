@@ -10,26 +10,30 @@ import (
 	"github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/logger"
 )
 
-type Server struct {
-	log *logger.Logger
-	srv *http.Server
-}
-
-type SrvHandler struct{}
-
 type Application interface {
 	Logger() *logger.Logger
 }
 
+type Server struct {
+	log     *logger.Logger
+	httpSrv *http.Server
+}
+
 func NewServer(app Application, host string, port, timeout int) *Server {
-	sh := SrvHandler{}
-	srv := http.Server{
+	appSrv := &Server{log: app.Logger()}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", appSrv.hello)
+	mux.HandleFunc("/hello", appSrv.hello)
+	mux.HandleFunc("/bye", appSrv.hello)
+
+	appSrv.httpSrv = &http.Server{
 		Addr:         fmt.Sprintf(host+":%d", port),
-		Handler:      midWare(app.Logger(), &sh),
+		Handler:      midWarePreProc(app.Logger(), mux),
 		ReadTimeout:  time.Duration(timeout) * time.Second,
 		WriteTimeout: time.Duration(timeout) * time.Second,
 	}
-	return &Server{log: app.Logger(), srv: &srv}
+	return appSrv
 }
 
 func (s *Server) Start(ctx context.Context) error {
@@ -37,22 +41,23 @@ func (s *Server) Start(ctx context.Context) error {
 		<-ctx.Done()
 		s.Stop(ctx)
 	}()
-	s.log.Info("Server.Starting", "Starting at address "+s.srv.Addr)
-	if err := s.srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+	s.log.Info("Server.Starting", "Starting at address "+s.httpSrv.Addr)
+	if err := s.httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return s.log.Error("Server.Listen", fmt.Sprintf("%v", err))
 	}
 	return nil
 }
 
 func (s *Server) Stop(ctx context.Context) error {
-	if err := s.srv.Shutdown(ctx); err != nil {
+	if err := s.httpSrv.Shutdown(ctx); err != nil {
 		return s.log.Error("Server.Stop", fmt.Sprintf("%v", err))
 	}
 	return nil
 }
 
-func (sh *SrvHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	user := "Anonimus"
+func (s *Server) hello(w http.ResponseWriter, r *http.Request) {
+	defer midWarePostProc(s.log, r)
+	user := getMWData(r).user
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(fmt.Sprintf("Hello %s!", user)))
 }

@@ -3,6 +3,7 @@ package logger
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 )
@@ -55,7 +56,16 @@ func (l Logger) encode(oper, txt, level string, depth int) string {
 }
 
 func (l Logger) output(oper, txt, level string, depth int) {
-	fmt.Println(l.encode(oper, txt, level, depth))
+	f := os.Stdout
+	if level == "ERROR" || level == "WARNING" {
+		f = os.Stderr
+	}
+	fmt.Fprintln(f, l.encode(oper, txt, level, depth))
+}
+
+func (l Logger) ErrorE(oper string, err error) error {
+	l.output(oper, fmt.Sprintf("%v", err), "ERROR", 0)
+	return err
 }
 
 func (l Logger) Error(oper, msg string) error {

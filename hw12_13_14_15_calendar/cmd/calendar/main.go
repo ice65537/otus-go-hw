@@ -25,7 +25,7 @@ func main() {
 		opStart = "Server.Start"
 		opStop  = "Server.Stop"
 	)
-	var storage app.Storage // err     error
+	var storage app.Storage
 
 	flag.Parse()
 

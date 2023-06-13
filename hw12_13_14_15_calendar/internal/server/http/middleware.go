@@ -13,12 +13,14 @@ func midWare(log *logger.Logger, next http.Handler) http.Handler {
 
 func mwLog(log *logger.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Debug("MW.Log", fmt.Sprintf("%v", *r), 5)
+		log.Debug("MW.Log", fmt.Sprintf("%v", (*r).Body), 5)
+		next.ServeHTTP(w, r)
 	})
 }
 
 func mwAuth(log *logger.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// TODO
+		log.Debug("MW.Auth", fmt.Sprintf("%v", (*r).Header), 5)
+		next.ServeHTTP(w, r)
 	})
 }

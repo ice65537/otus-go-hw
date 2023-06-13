@@ -62,6 +62,5 @@ func GetConfig() Config {
 			Timeout: viper.GetInt("http-server.timeout"),
 		},
 	}
-	fmt.Println(cfg)
 	return cfg
 }

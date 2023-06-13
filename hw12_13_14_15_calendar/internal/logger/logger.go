@@ -37,12 +37,12 @@ func New(appname string, level string, depth int) *Logger {
 }
 
 type Message struct {
-	Timestamp time.Time `json:timestamp`
-	AppName   string    `json:appname`
-	Level     string    `json:level`
-	Depth     int       `json:depth`
-	Oper      string    `json:oper`
-	Text      string    `json:text`
+	Timestamp time.Time `json:"timestamp"`
+	AppName   string    `json:"appname"`
+	Level     string    `json:"level"`
+	Depth     int       `json:"depth"`
+	Oper      string    `json:"oper"`
+	Text      string    `json:"text"`
 }
 
 func (l Logger) encode(oper, txt, level string, depth int) string {

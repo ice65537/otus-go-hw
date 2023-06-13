@@ -97,7 +97,6 @@ func (wrw *wrappedRW) Write(buf []byte) (int, error) {
 
 func mwWrapRW(log *logger.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// wrw := negroni.NewResponseWriter(w)
 		wrw := newWrappedRW(w)
 		next.ServeHTTP(wrw, r)
 		mwd := getMWData(r)

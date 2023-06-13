@@ -5,7 +5,6 @@ go 1.19
 require (
 	github.com/google/uuid v1.1.2
 	github.com/spf13/viper v1.16.0
-	github.com/urfave/negroni v1.0.0
 )
 
 require (

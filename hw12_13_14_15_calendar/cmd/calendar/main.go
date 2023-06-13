@@ -34,19 +34,19 @@ func main() {
 		return
 	}
 
-	config := GetConfig()
+	cfg := GetConfig()
 
-	switch config.Storage.Type {
+	switch cfg.Storage.Type {
 	case "memory":
 		storage = memstore.New()
 	default:
-		panic(fmt.Errorf("storage type [%s] unknown", config.Storage.Type))
+		panic(fmt.Errorf("storage type [%s] unknown", cfg.Storage.Type))
 	}
 
-	app := app.New("Calendar.Listener", config.Logger.Level, config.Logger.Depth, storage)
+	app := app.New("Calendar.Listener", cfg.Logger.Level, cfg.Logger.Depth, storage)
 	log := app.Logger()
 
-	server := internalhttp.NewServer(app)
+	server := internalhttp.NewServer(app, cfg.Server.Host, cfg.Server.Port, cfg.Server.Timeout)
 
 	ctx, cancel := signal.NotifyContext(context.Background(),
 		syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
@@ -70,5 +70,4 @@ func main() {
 		cancel()
 		os.Exit(1) //nolint:gocritic
 	}
-	log.Info(opStart, "Server is running...")
 }

@@ -10,6 +10,13 @@ import (
 type Config struct {
 	Logger  LoggerConf
 	Storage StorageConf
+	Server  ServerConf
+}
+
+type ServerConf struct {
+	Host    string
+	Port    int
+	Timeout int
 }
 
 type LoggerConf struct {
@@ -37,6 +44,9 @@ func GetConfig() Config {
 	viper.SetDefault("logger.level", "ERROR")
 	viper.SetDefault("logger.depth", 0)
 	viper.SetDefault("storage.type", "memory")
+	viper.SetDefault("http-server.host", "0.0.0.0")
+	viper.SetDefault("http-server.port", "1234")
+	viper.SetDefault("http-server.timeout", "1")
 	//
 	cfg := Config{
 		LoggerConf{
@@ -45,6 +55,11 @@ func GetConfig() Config {
 		},
 		StorageConf{
 			Type: viper.GetString("storage.type"),
+		},
+		ServerConf{
+			Host:    viper.GetString("http-server.host"),
+			Port:    viper.GetInt("http-server.port"),
+			Timeout: viper.GetInt("http-server.timeout"),
 		},
 	}
 	fmt.Println(cfg)

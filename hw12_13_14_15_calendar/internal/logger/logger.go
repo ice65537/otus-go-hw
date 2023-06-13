@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -35,7 +36,6 @@ func New(appname string, level string, depth int) *Logger {
 	return &Logger{AppName: appname, Level: level, Depth: depth}
 }
 
-/*
 type Message struct {
 	Timestamp time.Time `json:timestamp`
 	AppName   string    `json:appname`
@@ -44,11 +44,14 @@ type Message struct {
 	Oper      string    `json:oper`
 	Text      string    `json:text`
 }
-*/
 
 func (l Logger) encode(oper, txt, level string, depth int) string {
-	fmtS := `{"timestamp"="%s";"appname"="%s";"level"="%s";"depth"="%d";"oper"="%s";"text"="%s"}` //nolint:gocritic
-	return fmt.Sprintf(fmtS, time.Now().Format("RFC3339"), l.AppName, level, depth, oper, txt)
+	msg := Message{time.Now(), l.AppName, level, depth, oper, txt}
+	rslt, err := json.Marshal(msg)
+	if err != nil {
+		return fmt.Sprintf(`{"level"="ERROR","depth"="0","oper"="Logger.Encode","text"="%v"}`, err)
+	}
+	return string(rslt)
 }
 
 func (l Logger) output(oper, txt, level string, depth int) {

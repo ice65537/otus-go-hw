@@ -16,5 +16,5 @@ type Event struct {
 }
 
 func (evt Event) String() string {
-	return fmt.Sprintf("[%s]<%s>%s", evt.ID, evt.DateTime.Format("RFC822"), evt.Title)
+	return fmt.Sprintf("<%s>[%s]%s", evt.ID, evt.DateTime.Format("RFC822"), evt.Title)
 }

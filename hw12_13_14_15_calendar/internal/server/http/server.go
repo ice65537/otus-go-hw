@@ -29,7 +29,7 @@ func NewServer(app Application, host string, port, timeout int) *Server {
 
 	appSrv.httpSrv = &http.Server{
 		Addr:         fmt.Sprintf(host+":%d", port),
-		Handler:      midWarePreProc(app.Logger(), mux),
+		Handler:      midWareHandler(app.Logger(), mux),
 		ReadTimeout:  time.Duration(timeout) * time.Second,
 		WriteTimeout: time.Duration(timeout) * time.Second,
 	}
@@ -41,23 +41,21 @@ func (s *Server) Start(ctx context.Context) error {
 		<-ctx.Done()
 		s.Stop(ctx)
 	}()
-	s.log.Info("Server.Starting", "Starting at address "+s.httpSrv.Addr)
+	s.log.Info(ctx, "Server.Starting", "Starting at address "+s.httpSrv.Addr)
 	if err := s.httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		return s.log.Error("Server.Listen", fmt.Sprintf("%v", err))
+		return s.log.Error(ctx, "Server.Listen", fmt.Sprintf("%v", err))
 	}
 	return nil
 }
 
 func (s *Server) Stop(ctx context.Context) error {
 	if err := s.httpSrv.Shutdown(ctx); err != nil {
-		return s.log.Error("Server.Stop", fmt.Sprintf("%v", err))
+		return s.log.Error(ctx, "Server.Stop", fmt.Sprintf("%v", err))
 	}
 	return nil
 }
 
 func (s *Server) hello(w http.ResponseWriter, r *http.Request) {
-	defer midWarePostProc(s.log, r)
-	user := getMWData(r).user
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(fmt.Sprintf("Hello %s!", user)))
+	w.Write([]byte(fmt.Sprintf("Hello %s!", getReqSession(r).User)))
 }

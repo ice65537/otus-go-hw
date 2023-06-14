@@ -34,7 +34,7 @@ func (s *Storage) Upsert(ctx context.Context, log logger.Logger, evt storage.Eve
 		header = "Created event"
 	}
 	s.events[evt.ID] = evt
-	log.Info("Memstorage.Upsert", fmt.Sprintf("%s %s", header, evt))
+	log.Info(ctx, "Memstorage.Upsert", fmt.Sprintf("%s %s", header, evt))
 	return nil
 }
 
@@ -43,20 +43,20 @@ func (s *Storage) Drop(ctx context.Context, log logger.Logger, id string) error 
 	defer s.mu.Unlock()
 	evt, ok := s.events[id]
 	if !ok {
-		return log.Error("Memstorage.Drop", fmt.Sprintf("unknown event [%s]", id))
+		return log.Error(ctx, "Memstorage.Drop", fmt.Sprintf("unknown event [%s]", id))
 	}
 	delete(s.events, id)
-	log.Info("Memstorage.Drop", "Dropped event "+evt.String())
+	log.Info(ctx, "Memstorage.Drop", "Dropped event "+evt.String())
 	return nil
 }
 
 func (s *Storage) Get(ctx context.Context, log logger.Logger, dt1 time.Time, dt2 time.Time,
 ) ([]storage.Event, error) {
-	log.Debug("Memstorage.Get", fmt.Sprintf("select events from [%s,%s]", dt1, dt2), 1)
+	log.Debug(ctx, "Memstorage.Get", fmt.Sprintf("select events from [%s,%s]", dt1, dt2), 1)
 	idt1 := dt2int(dt1)
 	idt2 := dt2int(dt2)
 	if idt2 < idt1 {
-		return nil, log.Error("Memstorage.Get", fmt.Sprintf("invalid period from %s to %s", dt1, dt2))
+		return nil, log.Error(ctx, "Memstorage.Get", fmt.Sprintf("invalid period from %s to %s", dt1, dt2))
 	}
 	//
 	s.mu.RLock()
@@ -68,7 +68,7 @@ func (s *Storage) Get(ctx context.Context, log logger.Logger, dt1 time.Time, dt2
 			result = append(result, v)
 		}
 	}
-	log.Debug("Memstorage.Get", "%d events selected", 1)
+	log.Debug(ctx, "Memstorage.Get", "%d events selected", 1)
 	return result, nil
 }
 

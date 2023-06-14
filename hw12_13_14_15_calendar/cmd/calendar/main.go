@@ -21,10 +21,6 @@ func init() {
 }
 
 func main() {
-	const (
-		opStart = "Server.Start"
-		opStop  = "Server.Stop"
-	)
 	var storage app.Storage
 
 	flag.Parse()
@@ -59,14 +55,14 @@ func main() {
 		defer cancel()
 
 		if err := server.Stop(ctx); err != nil {
-			log.Error(opStop, "failed to stop http server: "+err.Error())
+			log.Error(ctx, "Server.Stop", "failed to stop http server: "+err.Error())
 		} else {
-			log.Info(opStop, "Server has been stopped")
+			log.Info(ctx, "Server.Stop", "Server has been stopped")
 		}
 	}()
 
 	if err := server.Start(ctx); err != nil {
-		log.Error(opStart, "failed to start http server: "+err.Error())
+		log.Error(ctx, "Server.Start", "failed to start http server: "+err.Error())
 		cancel()
 		os.Exit(1) //nolint:gocritic
 	}

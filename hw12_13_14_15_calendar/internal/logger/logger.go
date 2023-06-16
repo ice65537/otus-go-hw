@@ -22,10 +22,11 @@ func New(appname string, level string, depth int) *Logger {
 		appname = "Unknown"
 	}
 	dict := map[string]struct{}{
-		"ERROR":   {},
-		"WARNING": {},
-		"INFO":    {},
-		"DEBUG":   {},
+		"FATAL": {},
+		"ERROR": {},
+		"WARN":  {},
+		"INFO":  {},
+		"DEBUG": {},
 	}
 	if _, ok := dict[level]; !ok {
 		level = "ERROR"
@@ -94,6 +95,11 @@ func (l Logger) output(ctx context.Context, oper, txt, level string, depth int) 
 func (l Logger) ErrorE(ctx context.Context, oper string, err error) error {
 	l.output(ctx, oper, fmt.Sprintf("%v", err), "ERROR", 0)
 	return err
+}
+
+func (l Logger) Fatal(ctx context.Context, oper string, msg any) {
+	l.output(ctx, oper, fmt.Sprintf("%v", msg), "FATAL", 0)
+	panic(msg)
 }
 
 func (l Logger) Error(ctx context.Context, oper, msg string) error {

@@ -14,11 +14,11 @@ type App struct {
 }
 
 type Storage interface {
-	Init(context.Context, logger.Logger) error
-	Upsert(context.Context, logger.Logger, storage.Event) error
-	Drop(context.Context, logger.Logger, string) error
-	Get(context.Context, logger.Logger, time.Time, time.Time) ([]storage.Event, error)
-	Close(context.Context, logger.Logger) error
+	Init(context.Context, *logger.Logger) error
+	Upsert(context.Context, storage.Event) error
+	Drop(context.Context, string) error
+	Get(context.Context, time.Time, time.Time) ([]storage.Event, error)
+	Close(context.Context) error
 }
 
 func New(appName, logLevel string, logDepth int, store Storage) *App {

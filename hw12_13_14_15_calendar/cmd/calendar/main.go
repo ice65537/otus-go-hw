@@ -33,6 +33,9 @@ func main() {
 
 	cfg := GetConfig()
 
+	app := app.New("Calendar.Listener", cfg.Logger.Level, cfg.Logger.Depth, storage)
+	log := app.Logger()
+
 	switch cfg.Storage.Type {
 	case "memory":
 		storage = internalmem.New()
@@ -46,9 +49,6 @@ func main() {
 	default:
 		panic(fmt.Errorf("storage type [%s] unknown", cfg.Storage.Type))
 	}
-
-	app := app.New("Calendar.Listener", cfg.Logger.Level, cfg.Logger.Depth, storage)
-	log := app.Logger()
 
 	server := internalhttp.NewServer(app, cfg.Server.Host, cfg.Server.Port, cfg.Server.Timeout)
 

@@ -32,7 +32,7 @@ func New(host string, port int, dbname, username, password string) *Storage {
 	}
 }
 
-func (s *Storage) Init(ctx context.Context, log logger.Logger) error {
+func (s *Storage) Init(ctx context.Context, log *logger.Logger) error {
 	/*sqlx.DB - обертка над *sql.DB
 	sqlx.Tx - обертка над *sql.Tx
 	sqlx.Stmt - обертка над *sql.Stmt
@@ -46,12 +46,12 @@ func (s *Storage) Init(ctx context.Context, log logger.Logger) error {
 	return nil
 }
 
-func (s *Storage) Close(ctx context.Context, log logger.Logger) error {
+func (s *Storage) Close(ctx context.Context) error {
 	// TODO
 	return nil
 }
 
-func (s *Storage) Upsert(ctx context.Context, log logger.Logger, evt storage.Event) error {
+func (s *Storage) Upsert(ctx context.Context, evt storage.Event) error {
 	/*s.mu.Lock()
 	defer s.mu.Unlock()
 	_, ok := s.events[evt.ID]
@@ -65,7 +65,7 @@ func (s *Storage) Upsert(ctx context.Context, log logger.Logger, evt storage.Eve
 	return nil
 }
 
-func (s *Storage) Drop(ctx context.Context, log logger.Logger, id string) error {
+func (s *Storage) Drop(ctx context.Context, id string) error {
 	/*s.mu.Lock()
 	defer s.mu.Unlock()
 	evt, ok := s.events[id]
@@ -77,7 +77,7 @@ func (s *Storage) Drop(ctx context.Context, log logger.Logger, id string) error 
 	return nil
 }
 
-func (s *Storage) Get(ctx context.Context, log logger.Logger, dt1 time.Time, dt2 time.Time,
+func (s *Storage) Get(ctx context.Context, dt1 time.Time, dt2 time.Time,
 ) ([]storage.Event, error) {
 	/*log.Debug(ctx, "Memstorage.Get", fmt.Sprintf("select events from [%s,%s]", dt1, dt2), 1)
 	idt1 := dt2int(dt1)

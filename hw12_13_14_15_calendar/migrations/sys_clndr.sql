@@ -1,0 +1,14 @@
+--Скрипт выполняется администратором БД при установке
+DROP SCHEMA IF EXISTS clndr CASCADE;
+DROP ROLE IF EXISTS clndr;
+CREATE ROLE clndr WITH
+  LOGIN
+  NOSUPERUSER
+  INHERIT
+  NOCREATEDB
+  NOCREATEROLE
+  NOREPLICATION
+  PASSWORD 'clndr';
+
+CREATE SCHEMA IF NOT EXISTS clndr AUTHORIZATION clndr;
+GRANT ALL ON SCHEMA clndr TO clndr;

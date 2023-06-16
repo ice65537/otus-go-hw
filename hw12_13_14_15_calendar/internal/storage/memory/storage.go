@@ -64,7 +64,7 @@ func (s *Storage) Get(ctx context.Context, log logger.Logger, dt1 time.Time, dt2
 	//
 	result := []storage.Event{}
 	for _, v := range s.events {
-		if dt2int(v.DateTime) >= idt1 && dt2int(v.DateTime) <= idt2 {
+		if dt2int(v.StartDT) >= idt1 && dt2int(v.StartDT) <= idt2 {
 			result = append(result, v)
 		}
 	}

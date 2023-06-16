@@ -11,7 +11,8 @@ import (
 
 	"github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/app"
 	internalhttp "github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/server/http"
-	memstore "github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/storage/memory"
+	internalmem "github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/storage/memory"
+	internaldb "github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/storage/sql"
 )
 
 var configFile string
@@ -34,7 +35,14 @@ func main() {
 
 	switch cfg.Storage.Type {
 	case "memory":
-		storage = memstore.New()
+		storage = internalmem.New()
+	case "postgres":
+		storage = internaldb.New(cfg.Storage.Postgre.Host,
+			cfg.Storage.Postgre.Port,
+			cfg.Storage.Postgre.Dbname,
+			cfg.Storage.Postgre.Username,
+			cfg.Storage.Postgre.Password,
+		)
 	default:
 		panic(fmt.Errorf("storage type [%s] unknown", cfg.Storage.Type))
 	}

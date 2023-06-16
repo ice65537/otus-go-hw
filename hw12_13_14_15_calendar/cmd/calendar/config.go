@@ -25,7 +25,16 @@ type LoggerConf struct {
 }
 
 type StorageConf struct {
-	Type string
+	Type    string
+	Postgre StorePostgresConf
+}
+
+type StorePostgresConf struct {
+	Host     string
+	Port     int
+	Dbname   string
+	Username string
+	Password string
 }
 
 func GetConfig() Config {
@@ -47,6 +56,11 @@ func GetConfig() Config {
 	viper.SetDefault("http-server.host", "0.0.0.0")
 	viper.SetDefault("http-server.port", "1234")
 	viper.SetDefault("http-server.timeout", "1")
+	viper.SetDefault("store-postgres.host", "localhost")
+	viper.SetDefault("store-postgres.port", "2345")
+	viper.SetDefault("store-postgres.dbname", "calendar")
+	viper.SetDefault("store-postgres.username", "clndr")
+	viper.SetDefault("store-postgres.password", "")
 	//
 	cfg := Config{
 		LoggerConf{
@@ -61,6 +75,16 @@ func GetConfig() Config {
 			Port:    viper.GetInt("http-server.port"),
 			Timeout: viper.GetInt("http-server.timeout"),
 		},
+	}
+
+	if cfg.Storage.Type == "postgres" {
+		cfg.Storage.Postgre = StorePostgresConf{
+			Host:     viper.GetString("store-postgres.host"),
+			Port:     viper.GetInt("store-postgres.port"),
+			Dbname:   viper.GetString("store-postgres.dbname"),
+			Username: viper.GetString("store-postgres.username"),
+			Password: viper.GetString("store-postgres.password"),
+		}
 	}
 	return cfg
 }

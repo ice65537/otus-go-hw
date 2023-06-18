@@ -39,12 +39,11 @@ func NewServer(app Application, host string, port, timeout int) *Server {
 func (s *Server) Start(ctx context.Context) error {
 	go func() {
 		<-ctx.Done()
-		s.Stop(ctx)
+		s.Stop(ctx) //nolint: errcheck
 	}()
 	s.log.Info(ctx, "Server.Starting", "Starting at address "+s.httpSrv.Addr)
 	if err := s.httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		s.log.Fatal(ctx, "Server.Listen", fmt.Sprintf("%v", err))
-		return err
+		return s.log.Fatal(ctx, "Server.Listen", fmt.Sprintf("%v", err))
 	}
 	return nil
 }
@@ -58,5 +57,7 @@ func (s *Server) Stop(ctx context.Context) error {
 
 func (s *Server) hello(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(fmt.Sprintf("Hello %s!", getReqSession(r).User)))
+	if _, err := w.Write([]byte(fmt.Sprintf("Hello %s!", getReqSession(r).User))); err != nil {
+		s.log.Warning(r.Context(), "Hello", fmt.Sprintf("%v", err))
+	}
 }

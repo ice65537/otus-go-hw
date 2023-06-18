@@ -69,7 +69,7 @@ func main() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 		defer cancel()
 
-		server.Stop(ctx)
+		server.Stop(ctx) //nolint:errcheck
 	}()
 
 	if err := server.Start(ctx); err != nil {

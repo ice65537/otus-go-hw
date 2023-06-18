@@ -43,8 +43,7 @@ func (s *Storage) Init(ctx context.Context, log *logger.Logger, connStr string) 
 		values(:id,:title,:startdt,:stopdt,:desc,:owner,:notifybefore)`,
 	)
 	if err != nil {
-		s.log.Fatal(ctx, "DB.InsPrepare", err)
-		return err
+		return s.log.Fatal(ctx, "DB.InsPrepare", err)
 	}
 	s.update, err = s.db.PrepareNamedContext(ctx,
 		`update t_event set 
@@ -53,29 +52,25 @@ func (s *Storage) Init(ctx context.Context, log *logger.Logger, connStr string) 
 		where eid=:id`,
 	)
 	if err != nil {
-		s.log.Fatal(ctx, "DB.UpdPrepare", err)
-		return err
+		return s.log.Fatal(ctx, "DB.UpdPrepare", err)
 	}
 	s.delete, err = s.db.PrepareNamedContext(ctx, `delete from t_event where eid=:id`)
 	if err != nil {
-		s.log.Fatal(ctx, "DB.DelPrepare", err)
-		return err
+		return s.log.Fatal(ctx, "DB.DelPrepare", err)
 	}
 	s.get, err = s.db.PrepareNamedContext(ctx,
 		`select eid,etitle,estartdt,estopdt,eowner,enotifybefore,coalesce(edesc,'') 
 		from t_event 
 		where estartdt between :dt1 and :dt2`)
 	if err != nil {
-		s.log.Fatal(ctx, "DB.GetPrepare", err)
-		return err
+		return s.log.Fatal(ctx, "DB.GetPrepare", err)
 	}
 	s.getOne, err = s.db.PrepareNamedContext(ctx,
 		`select eid,etitle,estartdt,estopdt,eowner,enotifybefore,coalesce(edesc,'') 
 		from t_event 
 		where eid = :id`)
 	if err != nil {
-		s.log.Fatal(ctx, "DB.GetOnePrepare", err)
-		return err
+		return s.log.Fatal(ctx, "DB.GetOnePrepare", err)
 	}
 	return nil
 }

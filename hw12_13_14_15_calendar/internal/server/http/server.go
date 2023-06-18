@@ -2,30 +2,62 @@ package internalhttp
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"net/http"
+	"time"
+
+	"github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/logger"
 )
 
-type Server struct { // TODO
+type Application interface {
+	Logger() *logger.Logger
 }
 
-type Logger interface { // TODO
+type Server struct {
+	log     *logger.Logger
+	httpSrv *http.Server
 }
 
-type Application interface { // TODO
-}
+func NewServer(app Application, host string, port, timeout int) *Server {
+	appSrv := &Server{log: app.Logger()}
 
-func NewServer(logger Logger, app Application) *Server {
-	return &Server{}
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", appSrv.hello)
+	mux.HandleFunc("/hello", appSrv.hello)
+	mux.HandleFunc("/bye", appSrv.hello)
+
+	appSrv.httpSrv = &http.Server{
+		Addr:         fmt.Sprintf(host+":%d", port),
+		Handler:      midWareHandler(app.Logger(), mux),
+		ReadTimeout:  time.Duration(timeout) * time.Second,
+		WriteTimeout: time.Duration(timeout) * time.Second,
+	}
+	return appSrv
 }
 
 func (s *Server) Start(ctx context.Context) error {
-	// TODO
-	<-ctx.Done()
+	go func() {
+		<-ctx.Done()
+		s.Stop(ctx) //nolint: errcheck
+	}()
+	s.log.Info(ctx, "Server.Starting", "Starting at address "+s.httpSrv.Addr)
+	if err := s.httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		return s.log.Fatal(ctx, "Server.Listen", fmt.Sprintf("%v", err))
+	}
 	return nil
 }
 
 func (s *Server) Stop(ctx context.Context) error {
-	// TODO
+	if err := s.httpSrv.Shutdown(ctx); err != nil {
+		return s.log.Error(ctx, "Server.Stop", fmt.Sprintf("%v", err))
+	}
 	return nil
 }
 
-// TODO
+func (s *Server) hello(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	if _, err := w.Write([]byte(fmt.Sprintf("Hello %s!", getReqSession(r).User))); err != nil {
+		s.log.Warning(r.Context(), "Hello", fmt.Sprintf("%v", err))
+	}
+}

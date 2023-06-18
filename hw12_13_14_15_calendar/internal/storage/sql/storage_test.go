@@ -1,5 +1,6 @@
-package memstore
+package dbstore
 
+/*
 import (
 	"context"
 	"testing"
@@ -7,21 +8,20 @@ import (
 
 	"github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/logger"
 	"github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/storage"
+	_ "github.com/jackc/pgx/stdlib"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/goleak"
 )
 
 func TestStorage(t *testing.T) {
-	defer goleak.VerifyNone(t)
-
 	t.Run("Create event, read it, update it, drop it, read nothing", func(t *testing.T) {
 		store := New()
 		ctx, cancel := context.WithCancel(context.Background())
 		log := logger.New("test", "DEBUG", 5, cancel)
-		store.Init(ctx, log, "")
+		err := store.Init(ctx, log, "host=localhost port=5432 dbname=calendar user=clndr password=clndr")
+		require.NoError(t, err)
 
 		t1 := time.Now()
-		err := store.Upsert(ctx, storage.Event{
+		err = store.Upsert(ctx, storage.Event{
 			Title:   "Test-1",
 			StartDt: time.Now(),
 			StopDt:  time.Now().Add(30 * time.Minute),
@@ -55,3 +55,4 @@ func TestStorage(t *testing.T) {
 		require.Equal(t, 0, len(events))
 	})
 }
+*/

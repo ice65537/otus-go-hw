@@ -1,5 +1,20 @@
 [logger]
-level = "INFO"
+level = "DEBUG"
+depth = 5
 
-# TODO
-# ...
+[storage]
+type = "memory"
+
+[store-postgres]
+host = "localhost"
+port = 5432
+dbname = "calendar"
+username = "clndr"
+password = "clndr"
+
+[http-server]
+host = "localhost"
+port = 1234
+timeout = 10
+
+

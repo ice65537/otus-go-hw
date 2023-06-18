@@ -2,25 +2,65 @@ package app
 
 import (
 	"context"
+	"fmt"
+	"time"
+
+	"github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/logger"
+	"github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/storage"
 )
 
-type App struct { // TODO
+type App struct {
+	log    *logger.Logger
+	store  *Storage
+	cancel context.CancelFunc
 }
 
-type Logger interface { // TODO
+type Storage interface {
+	Init(context.Context, *logger.Logger, string) error
+	Upsert(context.Context, storage.Event) error
+	Drop(context.Context, string) error
+	Get(context.Context, time.Time, time.Time) ([]storage.Event, error)
+	Close(context.Context) error
 }
 
-type Storage interface { // TODO
+func New(appName,
+	logLevel string, logDepth int,
+	store Storage,
+	cf context.CancelFunc,
+) *App {
+	app := App{}
+	app.log = logger.New(appName, logLevel, logDepth, cf)
+	app.store = &store
+	app.cancel = cf
+	return &app
 }
 
-func New(logger Logger, storage Storage) *App {
-	return &App{}
+func (a App) Logger() *logger.Logger {
+	return a.log
 }
 
-func (a *App) CreateEvent(ctx context.Context, id, title string) error {
-	// TODO
-	return nil
-	// return a.storage.CreateEvent(storage.Event{ID: id, Title: title})
+func (a App) Init(ctx context.Context, connStr string) error {
+	return (*a.store).Init(ctx, a.log, connStr)
 }
 
-// TODO
+func (a App) Upsert(ctx context.Context, evt storage.Event) error {
+	return (*a.store).Upsert(ctx, evt)
+}
+
+func (a App) Drop(ctx context.Context, id string) error {
+	return (*a.store).Drop(ctx, id)
+}
+
+func (a App) Get(ctx context.Context, t1 time.Time, t2 time.Time) ([]storage.Event, error) {
+	a.log.Debug(ctx, "App.Get", fmt.Sprintf("select events from [%s,%s]",
+		t1.Format(time.RFC3339), t2.Format(time.RFC3339)), 1)
+	if t2.After(t1) {
+		return nil, a.log.Error(ctx, "App.Get", fmt.Sprintf("invalid period from %s to %s", t1, t2))
+	}
+	return (*a.store).Get(ctx, t1, t2)
+}
+
+func (a App) Close(ctx context.Context) error {
+	defer a.cancel()
+	return (*a.store).Close(ctx)
+}

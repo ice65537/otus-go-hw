@@ -13,6 +13,7 @@ import (
 	internalhttp "github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/server/http"
 	internalmem "github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/storage/memory"
 	internaldb "github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/storage/sql"
+	_ "github.com/jackc/pgx/stdlib"
 )
 
 var configFile string
@@ -57,7 +58,7 @@ func main() {
 	app := app.New("Calendar.Keeper", cfg.Logger.Level, cfg.Logger.Depth, storage, cancel)
 	if err := app.Init(ctx, connStr); err != nil {
 		cancel()
-		os.Exit(1) //nolint:gocritic
+		os.Exit(1) //nolint:gocritic,nolintlint
 	}
 
 	server := internalhttp.NewServer(app, cfg.Server.Host, cfg.Server.Port, cfg.Server.Timeout)
@@ -73,6 +74,6 @@ func main() {
 
 	if err := server.Start(ctx); err != nil {
 		cancel()
-		os.Exit(1) //nolint:gocritic
+		os.Exit(1) //nolint:gocritic,nolintlint
 	}
 }

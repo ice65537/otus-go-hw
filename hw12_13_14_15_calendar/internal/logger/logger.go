@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
+	uuid "github.com/google/uuid"
 )
 
 type Logger struct {
@@ -18,25 +18,34 @@ type Logger struct {
 	cancel  context.CancelFunc
 }
 
+const (
+	Fatal   = "FATAL"
+	Error   = "ERROR"
+	Warning = "WARNING"
+	Info    = "INFO"
+	Debug   = "DEBUG"
+)
+
 func New(appname string, level string, depth int, cf context.CancelFunc) *Logger {
 	if appname == "" {
 		appname = "Unknown"
 	}
 	dict := map[string]struct{}{
-		"FATAL": {},
-		"ERROR": {},
-		"WARN":  {},
-		"INFO":  {},
-		"DEBUG": {},
+		Fatal:   {},
+		Error:   {},
+		Warning: {},
+		Info:    {},
+		Debug:   {},
 	}
 	if _, ok := dict[level]; !ok {
-		level = "ERROR"
+		level = Error
 	}
-	if level != "DEBUG" {
+	switch {
+	case level != Debug:
 		depth = 0
-	} else if depth < 1 {
+	case depth < 1:
 		depth = 1
-	} else if depth > 5 {
+	case depth > 5:
 		depth = 5
 	}
 	return &Logger{AppName: appname, Level: level, Depth: depth, cancel: cf}
@@ -79,7 +88,7 @@ func (l Logger) encode(ctx context.Context, oper, txt, level string, depth int) 
 	}
 	rslt, err := json.Marshal(msg)
 	if err != nil {
-		return fmt.Sprintf(`{"timestamp"="%s","level"="ERROR","depth"="0","oper"="Logger.Encode","text"="%v"}`,
+		return fmt.Sprintf(`{"timestamp"="%s","level"=Error,"depth"="0","oper"="Logger.Encode","text"="%v"}`,
 			time.Now(), err)
 	}
 	return string(rslt)
@@ -87,7 +96,7 @@ func (l Logger) encode(ctx context.Context, oper, txt, level string, depth int) 
 
 func (l Logger) output(ctx context.Context, oper, txt, level string, depth int) {
 	f := os.Stdout
-	if level == "FATAL" || level == "ERROR" || level == "WARN" {
+	if level == Fatal || level == Error || level == Warning {
 		f = os.Stderr
 	}
 	fmt.Fprintln(f, l.encode(ctx, oper, txt, level, depth))
@@ -95,38 +104,38 @@ func (l Logger) output(ctx context.Context, oper, txt, level string, depth int) 
 
 func (l Logger) Fatal(ctx context.Context, oper string, msg any) error {
 	defer l.cancel()
-	l.output(ctx, oper, fmt.Sprintf("%v", msg), "FATAL", 0)
+	l.output(ctx, oper, fmt.Sprintf("%v", msg), Fatal, 0)
 	return fmt.Errorf(strings.ToLower(oper)+": %v", msg)
 }
 
 func (l Logger) Error(ctx context.Context, oper string, msg any) error {
-	if l.Level != "FATAL" {
-		l.output(ctx, oper, fmt.Sprintf("%v", msg), "ERROR", 0)
+	if l.Level != Fatal {
+		l.output(ctx, oper, fmt.Sprintf("%v", msg), Error, 0)
 	}
 	return fmt.Errorf(strings.ToLower(oper)+": %v", msg)
 }
 
 func (l Logger) Warning(ctx context.Context, oper, msg string) {
-	if l.Level == "ERROR" || l.Level == "FATAL" {
+	if l.Level == Error || l.Level == Fatal {
 		return
 	}
-	l.output(ctx, oper, msg, "WARN", 0)
+	l.output(ctx, oper, msg, Warning, 0)
 }
 
 func (l Logger) Info(ctx context.Context, oper, msg string) {
-	if l.Level == "ERROR" || l.Level == "WARN" || l.Level == "FATAL" {
+	if l.Level == Error || l.Level == Warning || l.Level == Fatal {
 		return
 	}
-	l.output(ctx, oper, msg, "INFO", 0)
+	l.output(ctx, oper, msg, Info, 0)
 }
 
 func (l Logger) Debug(ctx context.Context, oper, msg string, depth int) {
-	if l.Level == "ERROR" || l.Level == "WARN" || l.Level == "INFO" ||
-		l.Level == "FATAL" || depth > l.Depth {
+	if l.Level == Error || l.Level == Warning || l.Level == Info ||
+		l.Level == Fatal || depth > l.Depth {
 		return
 	}
 	if depth < 1 {
 		depth = 1
 	}
-	l.output(ctx, oper, msg, "DEBUG", depth)
+	l.output(ctx, oper, msg, Debug, depth)
 }

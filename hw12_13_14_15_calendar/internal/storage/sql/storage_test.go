@@ -7,6 +7,7 @@ import (
 
 	"github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/logger"
 	"github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/storage"
+	_ "github.com/jackc/pgx/stdlib"
 	"github.com/stretchr/testify/require"
 )
 

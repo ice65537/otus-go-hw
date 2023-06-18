@@ -8,17 +8,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/logger"
 	"github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/storage"
-	_ "github.com/jackc/pgx/stdlib"
 	"github.com/jmoiron/sqlx"
 )
-
-/*type Storage interface {
-	Init(context.Context, logger.Logger) error
-	Upsert(context.Context, logger.Logger, storage.Event) error
-	Drop(context.Context, logger.Logger, string) error
-	Get(context.Context, logger.Logger, time.Time, time.Time) ([]storage.Event, error)
-	Close(context.Context, logger.Logger) error
-}*/
 
 type Storage struct {
 	db     *sqlx.DB
@@ -29,12 +20,6 @@ type Storage struct {
 	get    *sqlx.NamedStmt
 	getOne *sqlx.NamedStmt
 }
-
-/*sqlx.DB - обертка над *sql.DB
-sqlx.Tx - обертка над *sql.Tx
-sqlx.Stmt - обертка над *sql.Stmt
-sqlx.NamedStmt - PreparedStatement с поддержкой именованых параметров
-Подключение jmoiron/sqlx :*/
 
 func New() *Storage {
 	return &Storage{}
@@ -163,7 +148,7 @@ func (s *Storage) Get(ctx context.Context, dt1 time.Time, dt2 time.Time,
 ) ([]storage.Event, error) {
 	dt1 = dt1.Truncate(time.Minute)
 	dt2 = dt2.Truncate(time.Minute)
-	rows, err := s.get.QueryContext(ctx,
+	rows, err := s.get.QueryContext(ctx, //nolint:rowserrcheck
 		map[string]any{
 			"dt1": dt1.Format(time.RFC3339Nano),
 			"dt2": dt2.Format(time.RFC3339Nano),
@@ -171,6 +156,7 @@ func (s *Storage) Get(ctx context.Context, dt1 time.Time, dt2 time.Time,
 	if err != nil {
 		return nil, s.log.Error(ctx, "DB.Get.Query", err)
 	}
+	defer rows.Close()
 	events := []storage.Event{}
 	for rows.Next() {
 		var evt storage.Event

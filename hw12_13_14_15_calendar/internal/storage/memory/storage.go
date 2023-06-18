@@ -21,7 +21,7 @@ func New() *Storage {
 	return &Storage{events: map[string]storage.Event{}}
 }
 
-func (s *Storage) Init(ctx context.Context, log *logger.Logger, connStr string) error {
+func (s *Storage) Init(_ context.Context, log *logger.Logger, _ string) error {
 	s.log = log
 	return nil
 }
@@ -29,9 +29,8 @@ func (s *Storage) Init(ctx context.Context, log *logger.Logger, connStr string) 
 func (s *Storage) Upsert(ctx context.Context, evt storage.Event) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	_, ok := s.events[evt.ID]
 	header := "Updated event"
-	if !ok {
+	if _, ok := s.events[evt.ID]; !ok {
 		evt.ID = uuid.New().String()
 		header = "Created event"
 	}
@@ -69,6 +68,6 @@ func (s *Storage) Get(ctx context.Context, dt1 time.Time, dt2 time.Time,
 	return result, nil
 }
 
-func (s *Storage) Close(ctx context.Context) error {
+func (s *Storage) Close(_ context.Context) error {
 	return nil
 }

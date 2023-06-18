@@ -40,7 +40,7 @@ type LoggerConf struct {
 func GetConfig() Config {
 	cfgFileParsed := strings.Split(configFile, "/") // configFile - main.go: global variable
 	cfgName := cfgFileParsed[len(cfgFileParsed)-1]
-	cfgPath := string(configFile[:len(configFile)-len(cfgName)])
+	cfgPath := configFile[:len(configFile)-len(cfgName)]
 	viper.SetConfigName(cfgName)
 	viper.SetConfigType("toml")
 	viper.AddConfigPath(cfgPath)

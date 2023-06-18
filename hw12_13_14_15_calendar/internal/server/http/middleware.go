@@ -46,7 +46,7 @@ func midWareHandler(log *logger.Logger, next http.Handler) http.Handler {
 }
 
 func mwAuth(r *http.Request) (string, bool) {
-	user, ok := (*r).Header["User"]
+	user, ok := r.Header["User"]
 	if !ok {
 		return "", false
 	}
@@ -56,7 +56,7 @@ func mwAuth(r *http.Request) (string, bool) {
 func midWareAfterResponse(log *logger.Logger, r *http.Request, retCode int, response []byte) {
 	sss := getReqSession(r)
 	log.Debug(r.Context(), "MidWare.AfterResponse",
-		fmt.Sprintf("Responce status [%d] with latency %s", retCode, time.Since(sss.Start)),
+		fmt.Sprintf("Response status [%d] with latency %s", retCode, time.Since(sss.Start)),
 		3,
 	)
 	log.Debug(r.Context(), "MidWare.AfterResponse",

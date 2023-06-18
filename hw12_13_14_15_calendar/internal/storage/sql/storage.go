@@ -93,7 +93,7 @@ func (s *Storage) Upsert(ctx context.Context, evt storage.Event) error {
 		exe = s.insert
 	}
 	sqlr, err := exe.ExecContext(ctx,
-		map[string]any{
+		map[string]interface{}{
 			"id":           evt.ID,
 			"title":        evt.Title,
 			"startdt":      evt.StartDt,
@@ -117,7 +117,7 @@ func (s *Storage) Upsert(ctx context.Context, evt storage.Event) error {
 }
 
 func (s *Storage) Drop(ctx context.Context, id string) error {
-	row := s.getOne.QueryRowContext(ctx, map[string]any{"id": id})
+	row := s.getOne.QueryRowContext(ctx, map[string]interface{}{"id": id})
 	if row.Err() != nil {
 		return s.log.Error(ctx, "DB.DropChkGet", row.Err())
 	}
@@ -126,7 +126,7 @@ func (s *Storage) Drop(ctx context.Context, id string) error {
 		&evt.Owner, &evt.NotifyBefore, &evt.Desc); err != nil {
 		return s.log.Error(ctx, "DB.DropChkScan", err)
 	}
-	sqlr, err := s.delete.ExecContext(ctx, map[string]any{"id": id})
+	sqlr, err := s.delete.ExecContext(ctx, map[string]interface{}{"id": id})
 	if err != nil {
 		return s.log.Error(ctx, "DB.Delete", err)
 	}
@@ -144,7 +144,7 @@ func (s *Storage) Get(ctx context.Context, dt1 time.Time, dt2 time.Time,
 	dt1 = dt1.Truncate(time.Minute)
 	dt2 = dt2.Truncate(time.Minute)
 	rows, err := s.get.QueryContext(ctx, //nolint:rowserrcheck
-		map[string]any{
+		map[string]interface{}{
 			"dt1": dt1.Format(time.RFC3339Nano),
 			"dt2": dt2.Format(time.RFC3339Nano),
 		})

@@ -102,13 +102,13 @@ func (l Logger) output(ctx context.Context, oper, txt, level string, depth int) 
 	fmt.Fprintln(f, l.encode(ctx, oper, txt, level, depth))
 }
 
-func (l Logger) Fatal(ctx context.Context, oper string, msg any) error {
+func (l Logger) Fatal(ctx context.Context, oper string, msg interface{}) error {
 	defer l.cancel()
 	l.output(ctx, oper, fmt.Sprintf("%v", msg), Fatal, 0)
 	return fmt.Errorf(strings.ToLower(oper)+": %v", msg)
 }
 
-func (l Logger) Error(ctx context.Context, oper string, msg any) error {
+func (l Logger) Error(ctx context.Context, oper string, msg interface{}) error {
 	if l.Level != Fatal {
 		l.output(ctx, oper, fmt.Sprintf("%v", msg), Error, 0)
 	}

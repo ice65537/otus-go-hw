@@ -33,14 +33,18 @@ func main() {
 
 	cfg := GetConfig()
 
-	app := app.New("Calendar.Listener", cfg.Logger.Level, cfg.Logger.Depth, storage)
-	log := app.Logger()
+	ctx, cancel := signal.NotifyContext(context.Background(),
+		syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
+	defer cancel()
 
+	connStr := ""
 	switch cfg.Storage.Type {
 	case "memory":
 		storage = internalmem.New()
 	case "postgres":
-		storage = internaldb.New(cfg.Storage.Postgre.Host,
+		storage = internaldb.New()
+		connStr = fmt.Sprintf("host=%s port=%d dbname=%s username=%s password=%s",
+			cfg.Storage.Postgre.Host,
 			cfg.Storage.Postgre.Port,
 			cfg.Storage.Postgre.Dbname,
 			cfg.Storage.Postgre.Username,
@@ -50,11 +54,13 @@ func main() {
 		panic(fmt.Errorf("storage type [%s] unknown", cfg.Storage.Type))
 	}
 
-	server := internalhttp.NewServer(app, cfg.Server.Host, cfg.Server.Port, cfg.Server.Timeout)
+	app := app.New("Calendar.Keeper", cfg.Logger.Level, cfg.Logger.Depth, storage, cancel)
+	if err := app.Init(ctx, connStr); err != nil {
+		cancel()
+		os.Exit(1) //nolint:gocritic
+	}
 
-	ctx, cancel := signal.NotifyContext(context.Background(),
-		syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
-	defer cancel()
+	server := internalhttp.NewServer(app, cfg.Server.Host, cfg.Server.Port, cfg.Server.Timeout)
 
 	go func() {
 		<-ctx.Done()
@@ -62,15 +68,10 @@ func main() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 		defer cancel()
 
-		if err := server.Stop(ctx); err != nil {
-			log.Error(ctx, "Server.Stop", "failed to stop http server: "+err.Error())
-		} else {
-			log.Info(ctx, "Server.Stop", "Server has been stopped")
-		}
+		server.Stop(ctx)
 	}()
 
 	if err := server.Start(ctx); err != nil {
-		log.Error(ctx, "Server.Start", "failed to start http server: "+err.Error())
 		cancel()
 		os.Exit(1) //nolint:gocritic
 	}

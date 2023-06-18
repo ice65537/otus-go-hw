@@ -43,7 +43,8 @@ func (s *Server) Start(ctx context.Context) error {
 	}()
 	s.log.Info(ctx, "Server.Starting", "Starting at address "+s.httpSrv.Addr)
 	if err := s.httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		return s.log.Error(ctx, "Server.Listen", fmt.Sprintf("%v", err))
+		s.log.Fatal(ctx, "Server.Listen", fmt.Sprintf("%v", err))
+		return err
 	}
 	return nil
 }

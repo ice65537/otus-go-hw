@@ -2,15 +2,11 @@ package memstore
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"math/rand"
-	"os"
-	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/logger"
+	"github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/storage"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 )
@@ -18,133 +14,44 @@ import (
 func TestStorage(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
-	t.Run("Create event", func(t *testing.T) {
+	t.Run("Create event, read it, update it, drop it, read nothing", func(t *testing.T) {
 		store := New()
-		ctx := context.Background()
-		log := logger.New("test", "DEBUG", 5)
-		store.Init(ctx, log)
+		ctx, cancel := context.WithCancel(context.Background())
+		log := logger.New("test", "DEBUG", 5, cancel)
+		store.Init(ctx, log, "")
+
 		t1 := time.Now()
-		tasksCount := 50
-		tasks := make([]Task, 0, tasksCount)
-
-		var runTasksCount int32
-
-		for i := 0; i < tasksCount; i++ {
-			err := fmt.Errorf("error from task %d", i)
-			tasks = append(tasks, func() error {
-				time.Sleep(time.Millisecond * time.Duration(rand.Intn(100)))
-				atomic.AddInt32(&runTasksCount, 1)
-				return err
-			})
-		}
-
-		workersCount := 10
-		maxErrorsCount := 23
-		err := Run(tasks, workersCount, maxErrorsCount)
-
-		require.Truef(t, errors.Is(err, ErrErrorsLimitExceeded), "actual err - %v", err)
-		require.LessOrEqual(t, runTasksCount, int32(workersCount+maxErrorsCount), "extra tasks were started")
-	})
-
-	t.Run("tasks without errors", func(t *testing.T) {
-		tasksCount := 50
-		tasks := make([]Task, 0, tasksCount)
-
-		var runTasksCount int32
-		var sumTime time.Duration
-
-		for i := 0; i < tasksCount; i++ {
-			taskSleep := time.Millisecond * time.Duration(rand.Intn(100))
-			sumTime += taskSleep
-
-			tasks = append(tasks, func() error {
-				time.Sleep(taskSleep)
-				atomic.AddInt32(&runTasksCount, 1)
-				return nil
-			})
-		}
-
-		workersCount := 5
-		maxErrorsCount := 1
-
-		start := time.Now()
-		err := Run(tasks, workersCount, maxErrorsCount)
-		elapsedTime := time.Since(start)
+		err := store.Upsert(ctx, storage.Event{
+			Title:   "Test-1",
+			StartDt: time.Now(),
+			StopDt:  time.Now().Add(30 * time.Minute),
+			Owner:   "tester",
+		})
+		t2 := time.Now()
 		require.NoError(t, err)
 
-		require.Equal(t, runTasksCount, int32(tasksCount), "not all tasks were completed")
-		require.LessOrEqual(t, int64(elapsedTime), int64(sumTime/2), "tasks were run sequentially?")
-	})
+		events, err2 := store.Get(ctx, t1, t2)
+		require.NoError(t, err2)
+		require.Equal(t, 1, len(events))
+		require.Equal(t, "Test-1", events[0].Title)
+		require.Equal(t, "tester", events[0].Owner)
+		require.Equal(t, "", events[0].Desc)
 
-	t.Run("Too much workers", func(t *testing.T) {
-		tasksCount := 30
-		tasks := make([]Task, 0, tasksCount)
-
-		var runTasksCount int32
-
-		for i := 0; i < tasksCount; i++ {
-			if i%2 == 0 {
-				tasks = append(tasks, func() error {
-					time.Sleep(50 * time.Millisecond)
-					atomic.AddInt32(&runTasksCount, 1)
-					return errors.New("Err")
-				})
-			} else {
-				tasks = append(tasks, func() error {
-					time.Sleep(50 * time.Millisecond)
-					atomic.AddInt32(&runTasksCount, 1)
-					return nil
-				})
-			}
-		}
-
-		workersCount := 300
-		maxErrorsCount := 20
-
-		err := RunLogged(tasks, workersCount, maxErrorsCount, os.Stdout)
+		events[0].Desc = "Abrakadabra"
+		err = store.Upsert(ctx, events[0])
 		require.NoError(t, err)
-		require.Equal(t, runTasksCount, int32(tasksCount), "not all tasks were completed")
-	})
 
-	t.Run("Zero (one) worker and Nonsequental and skip all errors tests", func(t *testing.T) {
-		tasksCount := 100
-		tasks := make([]Task, 0, tasksCount)
-
-		var runTasksCount int32
-
-		for i := 0; i < tasksCount; i++ {
-			if i%2 == 0 {
-				tasks = append(tasks, func() error {
-					time.Sleep(50 * time.Millisecond)
-					atomic.AddInt32(&runTasksCount, 1)
-					return errors.New("Err")
-				})
-			} else {
-				tasks = append(tasks, func() error {
-					time.Sleep(50 * time.Millisecond)
-					atomic.AddInt32(&runTasksCount, 1)
-					return nil
-				})
-			}
-		}
-
-		runTasksCount = 0
-		workersCount := -45     // equal to 1
-		maxErrorsCount := -1345 // ignore errors
-		start := time.Now()
-		err := Run(tasks, workersCount, maxErrorsCount)
-		elapsedTime := time.Since(start)
+		events, err = store.Get(ctx, t1, t2)
 		require.NoError(t, err)
-		require.Equal(t, runTasksCount, int32(tasksCount), "not all tasks were completed at 1st run")
+		require.Equal(t, 1, len(events))
+		require.Equal(t, "Test-1", events[0].Title)
+		require.Equal(t, "tester", events[0].Owner)
+		require.Equal(t, "Abrakadabra", events[0].Desc)
 
-		runTasksCount = 0
-		workersCount = 50
-		maxErrorsCount = -1 // ignore errors
-		start = time.Now()
-		err = Run(tasks, workersCount, maxErrorsCount)
-		elapsedTime2 := time.Since(start)
+		err = store.Drop(ctx, events[0].ID)
 		require.NoError(t, err)
-		require.Equal(t, runTasksCount, int32(tasksCount), "not all tasks were completed at 2nd run")
-		require.LessOrEqual(t, int64(elapsedTime2), int64(elapsedTime), "tasks were run sequentially?")
+		events, err = store.Get(ctx, t1, t2)
+		require.NoError(t, err)
+		require.Equal(t, 0, len(events))
 	})
 }

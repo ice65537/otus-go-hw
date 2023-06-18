@@ -13,17 +13,6 @@ type Config struct {
 	Server  ServerConf
 }
 
-type ServerConf struct {
-	Host    string
-	Port    int
-	Timeout int
-}
-
-type LoggerConf struct {
-	Level string
-	Depth int
-}
-
 type StorageConf struct {
 	Type    string
 	Postgre StorePostgresConf
@@ -35,6 +24,17 @@ type StorePostgresConf struct {
 	Dbname   string
 	Username string
 	Password string
+}
+
+type ServerConf struct {
+	Host    string
+	Port    int
+	Timeout int
+}
+
+type LoggerConf struct {
+	Level string
+	Depth int
 }
 
 func GetConfig() Config {

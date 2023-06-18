@@ -54,15 +54,14 @@ func (s *Storage) Drop(ctx context.Context, id string) error {
 
 func (s *Storage) Get(ctx context.Context, dt1 time.Time, dt2 time.Time,
 ) ([]storage.Event, error) {
-	idt1 := storage.Dt2int(dt1)
-	idt2 := storage.Dt2int(dt2)
 	//
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	//
 	result := []storage.Event{}
 	for _, v := range s.events {
-		if storage.Dt2int(v.StartDt) >= idt1 && storage.Dt2int(v.StartDt) <= idt2 {
+		if (v.StartDt.After(dt1) || v.StartDt.Equal(dt1)) &&
+			(v.StartDt.Before(dt2) || v.StartDt.Equal(dt2)) {
 			result = append(result, v)
 		}
 	}

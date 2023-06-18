@@ -52,10 +52,8 @@ func (a App) Drop(ctx context.Context, id string) error {
 }
 
 func (a App) Get(ctx context.Context, t1 time.Time, t2 time.Time) ([]storage.Event, error) {
-	a.log.Debug(ctx, "App.Get", fmt.Sprintf("select events from [%s,%s]", t1, t2), 1)
-	idt1 := storage.Dt2int(t1)
-	idt2 := storage.Dt2int(t2)
-	if idt2 < idt1 {
+	a.log.Debug(ctx, "App.Get", fmt.Sprintf("select events from [%s,%s]", t1.Format(time.RFC3339), t2.Format(time.RFC3339)), 1)
+	if t2.After(t1) {
 		return nil, a.log.Error(ctx, "App.Get", fmt.Sprintf("invalid period from %s to %s", t1, t2))
 	}
 	return (*a.store).Get(ctx, t1, t2)

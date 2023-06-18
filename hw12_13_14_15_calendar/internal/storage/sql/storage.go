@@ -44,9 +44,15 @@ func (s *Storage) Init(ctx context.Context, log *logger.Logger, connStr string) 
 	var err error
 	s.log = log
 	if s.db, err = sqlx.Open("pgx", connStr); err != nil {
-		s.log.Fatal(ctx, "DB.Connect", err)
-		return err
+		return s.log.Fatal(ctx, "DB.Connect", err)
 	}
+
+	x := []int64{}
+	err = s.db.Select(&x, "select 1 as x")
+	if err != nil {
+		return s.log.Fatal(ctx, "DB.ConnChk", err)
+	}
+
 	s.insert, err = s.db.PrepareNamedContext(ctx,
 		`insert into t_event (eid,etitle,estartdt,estopdt,edesc,eowner,enotifybefore)
 		values(:id,:title,:startdt,:stopdt,:desc,:owner,:notifybefore)`,
@@ -97,6 +103,8 @@ func (s *Storage) Close(ctx context.Context) error {
 }
 
 func (s *Storage) Upsert(ctx context.Context, evt storage.Event) error {
+	evt.StartDt = evt.StartDt.Truncate(time.Minute)
+	evt.StopDt = evt.StopDt.Truncate(time.Minute)
 	header := "Update"
 	exe := s.update
 	if evt.ID == "" {
@@ -134,8 +142,8 @@ func (s *Storage) Drop(ctx context.Context, id string) error {
 		return s.log.Error(ctx, "DB.DropChkGet", row.Err())
 	}
 	evt := storage.Event{}
-	if err := row.Scan(evt.ID, evt.Title, evt.StartDt, evt.StopDt,
-		evt.Owner, evt.NotifyBefore, evt.Desc); err != nil {
+	if err := row.Scan(&evt.ID, &evt.Title, &evt.StartDt, &evt.StopDt,
+		&evt.Owner, &evt.NotifyBefore, &evt.Desc); err != nil {
 		return s.log.Error(ctx, "DB.DropChkScan", err)
 	}
 	sqlr, err := s.delete.ExecContext(ctx, map[string]any{"id": id})
@@ -153,10 +161,12 @@ func (s *Storage) Drop(ctx context.Context, id string) error {
 
 func (s *Storage) Get(ctx context.Context, dt1 time.Time, dt2 time.Time,
 ) ([]storage.Event, error) {
+	dt1 = dt1.Truncate(time.Minute)
+	dt2 = dt2.Truncate(time.Minute)
 	rows, err := s.get.QueryContext(ctx,
 		map[string]any{
-			"dt1": storage.Dt2string(dt1),
-			"dt2": storage.Dt2string(dt2),
+			"dt1": dt1.Format(time.RFC3339Nano),
+			"dt2": dt2.Format(time.RFC3339Nano),
 		})
 	if err != nil {
 		return nil, s.log.Error(ctx, "DB.Get.Query", err)
@@ -164,14 +174,15 @@ func (s *Storage) Get(ctx context.Context, dt1 time.Time, dt2 time.Time,
 	events := []storage.Event{}
 	for rows.Next() {
 		var evt storage.Event
-		err = rows.Scan(evt.ID, evt.Title, evt.StartDt, evt.StopDt,
-			evt.Owner, evt.NotifyBefore, evt.Desc)
+		err = rows.Scan(&evt.ID, &evt.Title, &evt.StartDt, &evt.StopDt,
+			&evt.Owner, &evt.NotifyBefore, &evt.Desc)
 		if err != nil {
 			return nil, s.log.Error(ctx, "DB.Get.Scan", err)
 		}
 		events = append(events, evt)
 		s.log.Debug(ctx, "DB.Get.Row", evt.String(), 5)
 	}
-	s.log.Debug(ctx, "DB.Get", fmt.Sprintf("%d events selected", len(events)), 1)
+	s.log.Debug(ctx, "DB.Get", fmt.Sprintf("Query for datetime between [%s] and [%s] = %d events selected",
+		dt1.Format(time.RFC3339Nano), dt2.Format(time.RFC3339Nano), len(events)), 1)
 	return events, nil
 }

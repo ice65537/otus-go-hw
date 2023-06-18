@@ -16,13 +16,5 @@ type Event struct {
 }
 
 func (evt Event) String() string {
-	return fmt.Sprintf("<%s>[%s]%s", evt.ID, evt.StartDt.Format("RFC822"), evt.Title)
-}
-
-func Dt2int(date time.Time) int {
-	return date.Year()*1000 + date.YearDay()
-}
-
-func Dt2string(date time.Time) string {
-	return fmt.Sprintf("%d-%d-%d", date.Year(), date.Month(), date.Day())
+	return fmt.Sprintf("%s[%s]%s", evt.Owner, evt.StartDt.Format(time.RFC3339), evt.Title)
 }

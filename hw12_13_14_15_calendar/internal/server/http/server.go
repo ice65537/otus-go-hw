@@ -8,24 +8,37 @@ import (
 	"time"
 
 	"github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/logger"
+	"github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/storage"
 )
 
 type Application interface {
 	Logger() *logger.Logger
+	Upsert(context.Context, storage.Event) error
+	Drop(context.Context, string) error
+	Get(context.Context, time.Time, time.Time) ([]storage.Event, error)
+}
+
+type appGetEvents struct {
+	T1 time.Time `json:"t1"`
+	T2 time.Time `json:"t2"`
 }
 
 type Server struct {
+	app     Application
 	log     *logger.Logger
 	httpSrv *http.Server
 }
 
 func NewServer(app Application, host string, port, timeout int) *Server {
-	appSrv := &Server{log: app.Logger()}
+	appSrv := &Server{log: app.Logger(), app: app}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", appSrv.hello)
 	mux.HandleFunc("/hello", appSrv.hello)
-	mux.HandleFunc("/bye", appSrv.hello)
+	mux.HandleFunc("/event/new", appSrv.new)
+	mux.HandleFunc("/event/reset", appSrv.reset)
+	mux.HandleFunc("/event/drop", appSrv.drop)
+	mux.HandleFunc("/event/get", appSrv.get)
 
 	appSrv.httpSrv = &http.Server{
 		Addr:         fmt.Sprintf(host+":%d", port),
@@ -39,7 +52,7 @@ func NewServer(app Application, host string, port, timeout int) *Server {
 func (s *Server) Start(ctx context.Context) error {
 	go func() {
 		<-ctx.Done()
-		s.Stop(ctx) //nolint: errcheck
+		_ = s.Stop(ctx)
 	}()
 	s.log.Info(ctx, "Server.Starting", "Starting at address "+s.httpSrv.Addr)
 	if err := s.httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -53,11 +66,4 @@ func (s *Server) Stop(ctx context.Context) error {
 		return s.log.Error(ctx, "Server.Stop", fmt.Sprintf("%v", err))
 	}
 	return nil
-}
-
-func (s *Server) hello(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	if _, err := w.Write([]byte(fmt.Sprintf("Hello %s!", getReqSession(r).User))); err != nil {
-		s.log.Warning(r.Context(), "Hello", fmt.Sprintf("%v", err))
-	}
 }

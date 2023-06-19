@@ -44,7 +44,7 @@ func main() {
 		storage = internalmem.New()
 	case "postgres":
 		storage = internaldb.New()
-		connStr = fmt.Sprintf("host=%s port=%d dbname=%s username=%s password=%s",
+		connStr = fmt.Sprintf("host=%s port=%d dbname=%s user=%s password=%s",
 			cfg.Storage.Postgre.Host,
 			cfg.Storage.Postgre.Port,
 			cfg.Storage.Postgre.Dbname,
@@ -69,7 +69,7 @@ func main() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 		defer cancel()
 
-		server.Stop(ctx) //nolint:errcheck
+		_ = server.Stop(ctx)
 	}()
 
 	if err := server.Start(ctx); err != nil {

@@ -1,7 +1,9 @@
 package internalhttp
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -26,8 +28,13 @@ func midWareHandler(log *logger.Logger, next http.Handler) http.Handler {
 		log.Debug(r.Context(), "MidWare.Handler",
 			fmt.Sprintf("New request [%s] via [%s] from [%s] to [%s] by [%s]",
 				r.Method, r.Proto, r.RemoteAddr, r.URL.Path, r.UserAgent()),
-			5,
+			4,
 		)
+		if log.Level == "DEBUG" && log.Depth >= 5 {
+			data, _ := io.ReadAll(r.Body)
+			r.Body = io.NopCloser(bytes.NewBuffer(data))
+			log.Debug(r.Context(), "MidWare.Handler", fmt.Sprintf("Request body [%s]", data), 5)
+		}
 
 		var ok bool
 		sss.User, ok = mwAuth(r)

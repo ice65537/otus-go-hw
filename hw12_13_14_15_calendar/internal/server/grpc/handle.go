@@ -32,15 +32,15 @@ func evtFromReq(evtReq *eventsrv.Event) storage.Event {
 }
 
 func (s *Server) New(ctx context.Context, evtReq *eventsrv.Event) (*emptypb.Empty, error) {
-	return nil, s.edit(ctx, evtFromReq(evtReq), "gRPC.New")
+	return &emptypb.Empty{}, s.edit(ctx, evtFromReq(evtReq), "gRPC.New")
 }
 
 func (s *Server) Reset(ctx context.Context, evtReq *eventsrv.Event) (*emptypb.Empty, error) {
-	return nil, s.edit(ctx, evtFromReq(evtReq), "gRPC.Reset")
+	return &emptypb.Empty{}, s.edit(ctx, evtFromReq(evtReq), "gRPC.Reset")
 }
 
 func (s *Server) Drop(ctx context.Context, guidReq *eventsrv.GUID) (*emptypb.Empty, error) {
-	return nil, s.edit(ctx, storage.Event{ID: guidReq.Guid}, "gRPC.Drop")
+	return &emptypb.Empty{}, s.edit(ctx, storage.Event{ID: guidReq.Guid}, "gRPC.Drop")
 }
 
 func (s Server) edit(ctx context.Context, evt storage.Event, oper string) error {
@@ -73,15 +73,18 @@ func (s *Server) Get(ctx context.Context, evtSetReq *eventsrv.EventSetRequest) (
 	if err != nil {
 		return nil, status.Error(codes.Internal, fmt.Sprintf("%v", err))
 	}
+	evtSet = &eventsrv.EventSet{}
 	evtSet.Events = make([]*eventsrv.Event, len(events))
 	for i := range events {
-		evtSet.Events[i].Id = events[i].ID
-		evtSet.Events[i].StartDt = timestamppb.New(events[i].StartDt)
-		evtSet.Events[i].StopDt = timestamppb.New(events[i].StopDt)
-		evtSet.Events[i].Desc = events[i].Desc
-		evtSet.Events[i].Owner = events[i].Owner
-		evtSet.Events[i].Title = events[i].Title
-		evtSet.Events[i].NotifyBefore = int32(events[i].NotifyBefore)
+		evtSet.Events[i] = &eventsrv.Event{
+			Id:           events[i].ID,
+			StartDt:      timestamppb.New(events[i].StartDt),
+			StopDt:       timestamppb.New(events[i].StopDt),
+			Desc:         events[i].Desc,
+			Owner:        events[i].Owner,
+			Title:        events[i].Title,
+			NotifyBefore: int32(events[i].NotifyBefore),
+		}
 	}
 	err = nil
 	return

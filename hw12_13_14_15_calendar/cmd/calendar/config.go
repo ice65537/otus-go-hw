@@ -10,7 +10,8 @@ import (
 type Config struct {
 	Logger  LoggerConf
 	Storage StorageConf
-	Server  ServerConf
+	ServerHTTP  ServerConf
+	ServerGRPC  ServerConf
 }
 
 type StorageConf struct {
@@ -52,10 +53,17 @@ func GetConfig() Config {
 	// DEFAULTS
 	viper.SetDefault("logger.level", "ERROR")
 	viper.SetDefault("logger.depth", 0)
+
 	viper.SetDefault("storage.type", "memory")
+
 	viper.SetDefault("http-server.host", "0.0.0.0")
 	viper.SetDefault("http-server.port", "1234")
 	viper.SetDefault("http-server.timeout", "1")
+
+	viper.SetDefault("grpc-server.host", "0.0.0.0")
+	viper.SetDefault("grpc-server.port", "1235")
+	viper.SetDefault("grpc-server.timeout", "1")
+
 	viper.SetDefault("store-postgres.host", "localhost")
 	viper.SetDefault("store-postgres.port", "2345")
 	viper.SetDefault("store-postgres.dbname", "calendar")
@@ -63,17 +71,22 @@ func GetConfig() Config {
 	viper.SetDefault("store-postgres.password", "")
 	//
 	cfg := Config{
-		LoggerConf{
+		Logger: LoggerConf{
 			Level: viper.GetString("logger.level"),
 			Depth: viper.GetInt("logger.depth"),
 		},
-		StorageConf{
+		Storage: StorageConf{
 			Type: viper.GetString("storage.type"),
 		},
-		ServerConf{
+		ServerHTTP: ServerConf{
 			Host:    viper.GetString("http-server.host"),
 			Port:    viper.GetInt("http-server.port"),
 			Timeout: viper.GetInt("http-server.timeout"),
+		},
+		ServerGRPC: ServerConf{
+			Host:    viper.GetString("grpc-server.host"),
+			Port:    viper.GetInt("grpc-server.port"),
+			Timeout: viper.GetInt("grpc-server.timeout"),
 		},
 	}
 

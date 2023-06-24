@@ -9,7 +9,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/app"
+	internalapp "github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/app"
+	internalgrpc "github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/server/grpc"
 	internalhttp "github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/server/http"
 	internalmem "github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/storage/memory"
 	internaldb "github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/storage/sql"
@@ -23,7 +24,7 @@ func init() {
 }
 
 func main() {
-	var storage app.Storage
+	var storage internalapp.Storage
 
 	flag.Parse()
 
@@ -55,25 +56,40 @@ func main() {
 		panic(fmt.Errorf("storage type [%s] unknown", cfg.Storage.Type))
 	}
 
-	app := app.New("Calendar.Keeper", cfg.Logger.Level, cfg.Logger.Depth, storage, cancel)
+	app := internalapp.New("Calendar.Keeper", cfg.Logger.Level, cfg.Logger.Depth, storage, cancel)
 	if err := app.Init(ctx, connStr); err != nil {
 		cancel()
 		os.Exit(1) //nolint:gocritic,nolintlint
 	}
 
-	server := internalhttp.NewServer(app, cfg.Server.Host, cfg.Server.Port, cfg.Server.Timeout)
+	servHTTP := internalhttp.NewServer(app, cfg.ServerHTTP.Host, cfg.ServerHTTP.Port, cfg.ServerHTTP.Timeout)
+	servGRPC := internalgrpc.NewServer(app, cfg.ServerGRPC.Host, cfg.ServerGRPC.Port, cfg.ServerGRPC.Timeout)
 
 	go func() {
 		<-ctx.Done()
-
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 		defer cancel()
-
-		_ = server.Stop(ctx)
+		_ = servHTTP.Stop(ctx)
 	}()
 
-	if err := server.Start(ctx); err != nil {
-		cancel()
-		os.Exit(1) //nolint:gocritic,nolintlint
-	}
+	go func() {
+		<-ctx.Done()
+		// ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+		defer cancel()
+		servGRPC.Stop()
+	}()
+
+	go func() {
+		if err := servHTTP.Start(ctx); err != nil {
+			cancel()
+			os.Exit(1) //nolint:gocritic,nolintlint
+		}
+	}()
+	go func() {
+		if err := servGRPC.Start(ctx); err != nil {
+			cancel()
+			os.Exit(1) //nolint:gocritic,nolintlint
+		}
+	}()
+	<-ctx.Done()
 }

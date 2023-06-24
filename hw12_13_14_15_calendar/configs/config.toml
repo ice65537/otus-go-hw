@@ -17,4 +17,8 @@ host = "localhost"
 port = 1234
 timeout = 10
 
+[grpc-server]
+host = "localhost"
+port = 1235
+timeout = 10
 

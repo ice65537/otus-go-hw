@@ -31,5 +31,3 @@ func Marshall(events []Event) ([]byte, error) {
 	return data, err
 }
 
-/*curl localhost:1234/event/new -H User:ice65588 \
--d '{"title":"x","startdt":"2023-01-10T19:00:00.000Z","stopdt":"2023-01-10T19:00:00.000Z","notifybefore":600}'*/

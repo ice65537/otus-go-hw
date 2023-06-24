@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+package eventsrv;
+option go_package = "./;eventsrv";
+
+service Events {
+    rpc New(Event) returns (google.protobuf.Empty) {}
+    rpc Reset(Event) returns (google.protobuf.Empty) {}
+    rpc Drop(GUID) returns (google.protobuf.Empty) {}
+    rpc Get(EventSetRequest) returns (EventSet) {}
+    rpc Hello(google.protobuf.Empty) returns (HelloMsg) {}
+}
+
+message Event {
+    string id = 1;
+    string title = 2;
+    google.protobuf.Timestamp start_dt = 3;
+    google.protobuf.Timestamp stop_dt = 4;
+    string desc = 5;
+    string owner = 6;
+    int32  notify_before = 7;    
+}
+
+message GUID {
+    string guid = 1;
+}
+
+message HelloMsg {
+    string text = 1;
+}
+
+message EventSetRequest {
+    google.protobuf.Timestamp t1 = 1;
+    google.protobuf.Timestamp t2 = 2;
+}
+
+message EventSet {
+    repeated Event events = 1;
+}

@@ -1,3 +1,5 @@
+.PHONY: build run version test lint generate
+
 BIN := "./bin/calendar"
 #DOCKER_IMG="calendar:develop"
 
@@ -34,4 +36,4 @@ install-lint-deps:
 lint: install-lint-deps
 	golangci-lint run ./...
 
-.PHONY: build run version test lint
+

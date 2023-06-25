@@ -13,7 +13,10 @@ build:
 	go build -v -o $(BIN) -ldflags "$(LDFLAGS)" ./cmd/calendar
 
 run: build
+	sudo docker compose -f ./deployments/docker-compose-test.yml up -d 
+	sleep 3s
 	$(BIN) --config ./configs/config.toml
+	sudo docker compose -f ./deployments/docker-compose-test.yml down -v
 
 #build-img:
 #	docker build \
@@ -28,7 +31,9 @@ version: build
 	$(BIN) version
 
 test:
+	sudo docker compose -f ./deployments/docker-compose-test.yml up -d
 	go test -race ./internal/storage/...
+	sudo docker compose -f ./deployments/docker-compose-test.yml down -v
 
 install-lint-deps:
 	(which golangci-lint > /dev/null) || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell go env GOPATH)/bin v1.41.1

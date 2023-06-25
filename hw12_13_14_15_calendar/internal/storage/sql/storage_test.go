@@ -1,6 +1,5 @@
 package dbstore
 
-/*
 import (
 	"context"
 	"testing"
@@ -55,4 +54,3 @@ func TestStorage(t *testing.T) {
 		require.Equal(t, 0, len(events))
 	})
 }
-*/

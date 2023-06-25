@@ -3,7 +3,7 @@ level = "DEBUG"
 depth = 5
 
 [storage]
-type = "postgres"
+type = "memory"
 
 [store-postgres]
 host = "localhost"

@@ -8,15 +8,8 @@ import (
 	"time"
 
 	"github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/logger"
-	"github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/storage"
+	"github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/server"
 )
-
-type Application interface {
-	Logger() *logger.Logger
-	Upsert(context.Context, storage.Event) error
-	Drop(context.Context, string) error
-	Get(context.Context, time.Time, time.Time) ([]storage.Event, error)
-}
 
 type appGetEvents struct {
 	T1 time.Time `json:"t1"`
@@ -24,12 +17,12 @@ type appGetEvents struct {
 }
 
 type Server struct {
-	app     Application
+	app     server.Application
 	log     *logger.Logger
 	httpSrv *http.Server
 }
 
-func NewServer(app Application, host string, port, timeout int) *Server {
+func NewServer(app server.Application, host string, port, timeout int) *Server {
 	appSrv := &Server{log: app.Logger(), app: app}
 
 	mux := http.NewServeMux()

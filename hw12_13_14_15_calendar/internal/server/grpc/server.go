@@ -4,31 +4,23 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"time"
 
 	eventsrv "github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/api"
 	"github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/logger"
-	"github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/storage"
+	"github.com/ice65537/otus-go-hw/hw12_13_14_15_calendar/internal/server"
 	"google.golang.org/grpc"
 )
 
-type Application interface {
-	Logger() *logger.Logger
-	Upsert(context.Context, storage.Event) error
-	Drop(context.Context, string) error
-	Get(context.Context, time.Time, time.Time) ([]storage.Event, error)
-}
-
 type Server struct {
 	eventsrv.UnimplementedEventsServer
-	app     Application
+	app     server.Application
 	log     *logger.Logger
 	grpcSrv *grpc.Server
 	addr    string
 	timeout int
 }
 
-func NewServer(app Application, host string, port, timeout int) *Server {
+func NewServer(app server.Application, host string, port, timeout int) *Server {
 	appSrv := &Server{
 		log:     app.Logger(),
 		app:     app,

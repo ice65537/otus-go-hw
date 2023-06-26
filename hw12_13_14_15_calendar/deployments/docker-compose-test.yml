@@ -8,9 +8,10 @@ services:
     environment:
       POSTGRES_USER: sys
       POSTGRES_PASSWORD: sys
-      POSTGRES_DB: sysdb
+      POSTGRES_DB: calendar
       PGDATA: /var/lib/postgresql/data/pgdata 
     volumes:
-      - /mnt/pod-store/pg-clndr:/var/lib/postgresql/data 
+    #  - /mnt/pod-store/pg-clndr:/var/lib/postgresql/data 
+      - ../migrations/000_init.sql:/docker-entrypoint-initdb.d/init.sql
     network_mode: host
 

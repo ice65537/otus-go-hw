@@ -14,6 +14,7 @@ import (
 func TestStorage(t *testing.T) {
 	t.Run("Create event, read it, update it, drop it, read nothing", func(t *testing.T) {
 		store := New()
+		
 		ctx, cancel := context.WithCancel(context.Background())
 		log := logger.New("test", "DEBUG", 5, cancel)
 		err := store.Init(ctx, log, "host=localhost port=5432 dbname=calendar user=clndr password=clndr")
